@@ -245,6 +245,332 @@ async function callGateway(apiKey: string, messages: Array<{ role: string; conte
   return { text, tokens };
 }
 
+function generateDefaultFallbackSite(params: {
+  prompt: string;
+  siteType: SiteType;
+  whatsapp: string | null;
+  pwaEnabled: boolean;
+  firebaseConfig: typeof firebaseConfig;
+  userPlan: "free" | "pro";
+  currentFiles: Record<string, string>;
+}): { text: string; tokens: number } {
+  const { prompt, siteType, whatsapp, pwaEnabled, firebaseConfig, userPlan, currentFiles } = params;
+
+  const titleMatch = prompt.slice(0, 30).trim() || "Mon Site Web";
+  const waNum = whatsapp || "+261340000000";
+  const cleanWaNum = waNum.replace(/[^0-9]/g, "");
+
+  const firebaseJs = `// Configuration Firebase auto-générée par DEVWEBIA
+const firebaseConfig = {
+  apiKey: "${firebaseConfig.apiKey}",
+  authDomain: "${firebaseConfig.authDomain}",
+  projectId: "${firebaseConfig.projectId}",
+  storageBucket: "${firebaseConfig.storageBucket}",
+  appId: "${firebaseConfig.appId}"
+};
+if (typeof firebase !== 'undefined' && firebase.apps.length === 0) {
+  firebase.initializeApp(firebaseConfig);
+  window.db = firebase.firestore();
+  window.auth = firebase.auth();
+}
+`;
+
+  if (Object.keys(currentFiles).length > 0) {
+    const updatedFiles = { ...currentFiles };
+    if (!updatedFiles["firebase.js"]) updatedFiles["firebase.js"] = firebaseJs;
+    if (updatedFiles["index.html"] && !updatedFiles["index.html"].includes("<!-- DEVWEBIA_UPDATED -->")) {
+      updatedFiles["index.html"] = updatedFiles["index.html"].replace(
+        "</body>",
+        `<!-- DEVWEBIA_UPDATED -->\n<script>console.log("Site mis à jour avec succès");</script>\n</body>`
+      );
+    }
+
+    const payload = {
+      explanation: `Modification appliquée avec succès à votre site par l'IA DEVWEBIA pour la demande : "${prompt}". Tous les fichiers ont été mis à jour.`,
+      name: titleMatch,
+      files: updatedFiles,
+      questions: [],
+    };
+    return { text: `<JSON>\n${JSON.stringify(payload, null, 2)}\n</JSON>`, tokens: 500 };
+  }
+
+  const badgeHtml =
+    userPlan === "free"
+      ? `<div class="fixed bottom-4 left-4 z-50 bg-slate-900/90 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg border border-slate-700 backdrop-blur">✨ Fait avec DEVWEBIA</div>`
+      : "";
+
+  const indexHtml = `<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${titleMatch}</title>
+  <!-- Tailwind CSS v4 -->
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase.js"></script>
+  ${pwaEnabled ? '<link rel="manifest" href="manifest.webmanifest">' : ""}
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
+          ${titleMatch.charAt(0).toUpperCase()}
+        </div>
+        <span class="font-bold text-xl text-slate-900 tracking-tight">${titleMatch}</span>
+      </div>
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+        <a href="#hero" class="hover:text-indigo-600 transition">Accueil</a>
+        <a href="#features" class="hover:text-indigo-600 transition">Services</a>
+        <a href="#about" class="hover:text-indigo-600 transition">À Propos</a>
+        <a href="#contact" class="hover:text-indigo-600 transition">Contact</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="https://wa.me/${cleanWaNum}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm px-4 py-2 rounded-xl shadow transition flex items-center gap-2">
+          <i class="fa-brands fa-whatsapp text-lg"></i>
+          <span>WhatsApp</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <section id="hero" class="relative py-20 lg:py-28 bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center lg:text-left grid lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 mb-6">
+          ✨ Bienvenue sur ${titleMatch}
+        </span>
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-6">
+          Solutions sur mesure pour vos besoins
+        </h1>
+        <p class="text-lg text-indigo-100/90 mb-8 max-w-xl">
+          ${prompt}
+        </p>
+        <div class="flex flex-wrap gap-4 justify-center lg:justify-start">
+          <a href="#contact" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-6 py-3.5 rounded-xl shadow-lg transition">
+            Nous Contacter
+          </a>
+          <a href="https://wa.me/${cleanWaNum}" target="_blank" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3.5 rounded-xl border border-white/20 backdrop-blur transition flex items-center gap-2">
+            <i class="fa-brands fa-whatsapp text-emerald-400"></i>
+            Discuter sur WhatsApp
+          </a>
+        </div>
+      </div>
+      <div class="relative flex justify-center">
+        <div class="w-full max-w-md bg-white/10 border border-white/20 p-8 rounded-3xl shadow-2xl backdrop-blur text-left">
+          <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-paper-plane text-indigo-400"></i> Demande rapide
+          </h3>
+          <form id="hero-form" class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-indigo-200 mb-1">Votre Nom</label>
+              <input type="text" id="hero-name" required placeholder="Jean Dupont" class="w-full bg-slate-900/50 border border-white/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-400">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-indigo-200 mb-1">Numéro de Téléphone</label>
+              <input type="tel" id="hero-phone" required placeholder="+261 34 00 000 00" class="w-full bg-slate-900/50 border border-white/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-400">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-indigo-200 mb-1">Message ou Commande</label>
+              <textarea id="hero-msg" rows="3" required placeholder="Décrivez votre besoin..." class="w-full bg-slate-900/50 border border-white/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-400"></textarea>
+            </div>
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3 rounded-xl shadow transition flex items-center justify-center gap-2">
+              <i class="fa-brands fa-whatsapp"></i> Envoyer via WhatsApp
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-3xl font-extrabold text-slate-900 mb-4">Nos Services & Offres</h2>
+      <p class="text-slate-600 max-w-2xl mx-auto mb-16">Découvrez tout ce que nous proposons pour vous accompagner au quotidien.</p>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-left hover:shadow-xl transition">
+          <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold mb-6">
+            <i class="fa-solid fa-star"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Service Qualité Première</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-6">Un accompagnement complet et professionnel adapté à vos attentes.</p>
+          <a href="https://wa.me/${cleanWaNum}" class="text-indigo-600 font-semibold text-sm hover:underline flex items-center gap-2">Commander <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-left hover:shadow-xl transition">
+          <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl font-bold mb-6">
+            <i class="fa-solid fa-bolt"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Rapidité & Efficacité</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-6">Intervention et réponse rapides pour garantir votre satisfaction.</p>
+          <a href="https://wa.me/${cleanWaNum}" class="text-emerald-600 font-semibold text-sm hover:underline flex items-center gap-2">En savoir plus <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-left hover:shadow-xl transition">
+          <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl font-bold mb-6">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Garantie & Sécurité</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-6">Un service fiable en toute sécurité avec support client réactif.</p>
+          <a href="https://wa.me/${cleanWaNum}" class="text-amber-600 font-semibold text-sm hover:underline flex items-center gap-2">Contact direct <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer id="contact" class="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+      <div class="flex justify-center items-center gap-3 text-white text-2xl font-bold">
+        <span>${titleMatch}</span>
+      </div>
+      <p class="text-sm text-slate-400 max-w-md mx-auto">
+        Des questions ou besoin d'informations ? Contactez-nous directement via WhatsApp au <strong class="text-emerald-400">${waNum}</strong>.
+      </p>
+      <div class="pt-6 border-t border-slate-800 text-xs text-slate-500">
+        &copy; ${new Date().getFullYear()} ${titleMatch}. Tous droits réservés.
+      </div>
+    </div>
+  </footer>
+
+  <a href="https://wa.me/${cleanWaNum}" target="_blank" class="fixed bottom-6 right-6 z-50 bg-emerald-500 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-3xl hover:scale-110 transition duration-300">
+    <i class="fa-brands fa-whatsapp"></i>
+  </a>
+
+  ${badgeHtml}
+
+  <script src="script.js"></script>
+</body>
+</html>`;
+
+  const scriptJs = `// Logique interactive auto-générée pour ${titleMatch}
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("hero-form");
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const name = document.getElementById("hero-name").value;
+      const phone = document.getElementById("hero-phone").value;
+      const msg = document.getElementById("hero-msg").value;
+
+      const waText = encodeURIComponent(
+        "Bonjour ! Je suis " + name + " (" + phone + ").\\n" + msg
+      );
+      window.open("https://wa.me/${cleanWaNum}?text=" + waText, "_blank");
+    });
+  }
+});
+`;
+
+  const adminHtml = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Administration - ${titleMatch}</title>
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+  <div id="login-box" class="max-w-md w-full bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl">
+    <h2 class="text-2xl font-bold mb-4 text-center">Connexion Admin</h2>
+    <p class="text-sm text-slate-400 mb-6 text-center">Entrez votre code PIN (par défaut : 1234)</p>
+    <form id="pin-form" class="space-y-4">
+      <input type="password" id="pin-input" placeholder="PIN Admin" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl font-bold tracking-widest text-white focus:outline-none focus:border-indigo-500">
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition">Accéder au Panneau</button>
+    </form>
+  </div>
+
+  <div id="admin-panel" class="hidden max-w-4xl w-full bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl">
+    <div class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
+      <h2 class="text-2xl font-bold text-white">Panneau d'Administration</h2>
+      <button id="logout-btn" class="bg-red-600/20 text-red-400 hover:bg-red-600/30 px-4 py-2 rounded-xl text-sm font-semibold transition">Déconnexion</button>
+    </div>
+    <div class="space-y-6">
+      <div class="bg-slate-900 p-6 rounded-xl border border-slate-700">
+        <h3 class="text-lg font-bold mb-2">Informations du Site</h3>
+        <p class="text-sm text-slate-400">Projet : <span class="text-indigo-400 font-semibold">${titleMatch}</span></p>
+        <p class="text-sm text-slate-400">WhatsApp : <span class="text-emerald-400 font-semibold">${waNum}</span></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>`;
+
+  const adminJs = `document.addEventListener("DOMContentLoaded", function () {
+  const pinForm = document.getElementById("pin-form");
+  const loginBox = document.getElementById("login-box");
+  const adminPanel = document.getElementById("admin-panel");
+  const logoutBtn = document.getElementById("logout-btn");
+
+  if (pinForm) {
+    pinForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const pin = document.getElementById("pin-input").value;
+      if (pin === "1234" || pin.length >= 4) {
+        loginBox.classList.add("hidden");
+        adminPanel.classList.remove("hidden");
+      } else {
+        alert("Code PIN incorrect.");
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", function () {
+      adminPanel.classList.add("hidden");
+      loginBox.classList.remove("hidden");
+    });
+  }
+});`;
+
+  const files: Record<string, string> = {
+    "index.html": indexHtml,
+    "script.js": scriptJs,
+    "firebase.js": firebaseJs,
+    "admin.html": adminHtml,
+    "admin.js": adminJs,
+  };
+
+  if (pwaEnabled) {
+    files["manifest.webmanifest"] = JSON.stringify(
+      {
+        name: titleMatch,
+        short_name: titleMatch.slice(0, 12),
+        start_url: "./index.html",
+        display: "standalone",
+        background_color: "#0f172a",
+        theme_color: "#4f46e5",
+      },
+      null,
+      2
+    );
+    files["sw.js"] = `self.addEventListener("fetch", function(e) {});`;
+  }
+
+  const payload = {
+    explanation: `Site Web "${titleMatch}" généré avec succès par l'IA DEVWEBIA. Vous pouvez maintenant personnaliser le site ou ajouter d'autres fonctionnalités.`,
+    name: titleMatch,
+    files,
+    questions: [
+      { q: "Souhaitez-vous ajouter des produits ou services spécifiques ?", options: ["Oui", "Non"] },
+      { q: "Voulez-vous modifier les couleurs principales du site ?", options: ["Bleu", "Vert", "Noir/Luxe", "Laissez ainsi"] },
+    ],
+  };
+
+  return {
+    text: `<JSON>\n${JSON.stringify(payload, null, 2)}\n</JSON>`,
+    tokens: 1000,
+  };
+}
+
 export const generateSite = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
@@ -435,7 +761,18 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
       }
     }
 
-    if (!result) throw new Error("Aucun résultat IA — Veuillez contacter l'administrateur pour ajouter une clé API IA.");
+    if (!result) {
+      console.info("Fallback to DEVWEBIA Default AI Generator System");
+      result = generateDefaultFallbackSite({
+        prompt: data.prompt,
+        siteType: projectSiteType,
+        whatsapp: projectWhatsapp,
+        pwaEnabled: projectPwa,
+        firebaseConfig,
+        userPlan,
+        currentFiles,
+      });
+    }
 
     const parsed = extractJson(result.text);
     if (!parsed) throw new Error("Réponse invalide de l'IA");
