@@ -51,88 +51,72 @@ export const publishSite = createServerFn({ method: "POST" })
     const repoName = project.github_repo?.split("/").pop() || `devwebia-${slugify(project.name)}-${data.projectId.slice(0, 6)}`;
     let repoFullName = project.github_repo ?? `${ghUser}/${repoName}`;
 
-    let repoExists = false;
-    if (project.github_repo) {
-      const checkRes = await fetch(`https://api.github.com/repos/${project.github_repo}`, {
-        headers: {
-          Authorization: `Bearer ${ghToken}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "DEVWEBIA",
-        },
-      });
-      if (checkRes.ok) {
-        repoExists = true;
-        repoFullName = project.github_repo;
-      }
-    }
-
-    if (!repoExists) {
-      const createRepoRes = await fetch("https://api.github.com/user/repos", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${ghToken}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "DEVWEBIA",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: repoName,
-          description: `Site généré par DEVWEBIA — ${project.name}`,
-          private: false,
-          auto_init: true,
-        }),
-      });
-
-      if (createRepoRes.ok) {
-        const createJson = (await createRepoRes.json()) as { full_name?: string };
-        if (createJson.full_name) {
-          repoFullName = createJson.full_name;
-        } else {
-          repoFullName = `${ghUser}/${repoName}`;
+    // Sync files to GitHub (best effort, non-blocking for Vercel deployment)
+    try {
+      let repoExists = false;
+      if (project.github_repo) {
+        const checkRes = await fetch(`https://api.github.com/repos/${project.github_repo}`, {
+          headers: {
+            Authorization: `Bearer ${ghToken}`,
+            Accept: "application/vnd.github+json",
+            "User-Agent": "DEVWEBIA",
+          },
+        });
+        if (checkRes.ok) {
+          repoExists = true;
+          repoFullName = project.github_repo;
         }
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      } else if (createRepoRes.status === 422) {
-        repoFullName = `${ghUser}/${repoName}`;
-      } else {
-        const errText = await createRepoRes.text();
-        throw new Error(`GitHub create repo (${createRepoRes.status}): ${errText}`);
-      }
-    }
-
-    for (const [path, content] of Object.entries(files)) {
-      const encodedPath = path.split("/").map((p) => encodeURIComponent(p)).join("/");
-
-      let sha: string | undefined;
-      const getRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
-        headers: {
-          Authorization: `Bearer ${ghToken}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "DEVWEBIA",
-        },
-      });
-      if (getRes.ok) {
-        const j = (await getRes.json()) as { sha?: string };
-        sha = j.sha;
       }
 
-      let putRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${ghToken}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "DEVWEBIA",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: `DEVWEBIA update ${path}`,
-          content: toBase64(content),
-          sha,
-        }),
-      });
+      if (!repoExists) {
+        const createRepoRes = await fetch("https://api.github.com/user/repos", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${ghToken}`,
+            Accept: "application/vnd.github+json",
+            "User-Agent": "DEVWEBIA",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: repoName,
+            description: `Site généré par DEVWEBIA — ${project.name}`,
+            private: false,
+            auto_init: true,
+          }),
+        });
 
-      if (putRes.status === 404) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        putRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
+        if (createRepoRes.ok) {
+          const createJson = (await createRepoRes.json()) as { full_name?: string };
+          repoFullName = createJson.full_name || `${ghUser}/${repoName}`;
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        } else if (createRepoRes.status === 422) {
+          repoFullName = `${ghUser}/${repoName}`;
+        } else {
+          console.warn("GitHub create repo notice:", await createRepoRes.text());
+        }
+      }
+
+      for (const [path, content] of Object.entries(files)) {
+        const encodedPath = path.split("/").map((p) => encodeURIComponent(p)).join("/");
+
+        let sha: string | undefined;
+        try {
+          const getRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
+            headers: {
+              Authorization: `Bearer ${ghToken}`,
+              Accept: "application/vnd.github+json",
+              "User-Agent": "DEVWEBIA",
+            },
+          });
+          if (getRes.ok) {
+            const j = (await getRes.json()) as { sha?: string };
+            sha = j.sha;
+          }
+        } catch {
+          // ignore get content error
+        }
+
+        const putRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${ghToken}`,
@@ -146,12 +130,13 @@ export const publishSite = createServerFn({ method: "POST" })
             sha,
           }),
         });
-      }
 
-      if (!putRes.ok) {
-        const errTxt = await putRes.text();
-        throw new Error(`GitHub upload ${path}: ${putRes.status} ${errTxt}`);
+        if (!putRes.ok) {
+          console.warn(`GitHub upload warning for ${path}: ${putRes.status}`, await putRes.text());
+        }
       }
+    } catch (ghError) {
+      console.warn("GitHub sync skipped due to error:", ghError);
     }
 
     let vercelProjectId = project.vercel_project_id ?? null;
