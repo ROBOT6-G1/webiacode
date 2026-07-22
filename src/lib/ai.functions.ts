@@ -291,10 +291,31 @@ const firebaseConfig = {
   storageBucket: "${firebaseConfig.storageBucket}",
   appId: "${firebaseConfig.appId}"
 };
-if (typeof firebase !== 'undefined' && firebase.apps.length === 0) {
-  firebase.initializeApp(firebaseConfig);
-  window.db = firebase.firestore();
-  window.auth = firebase.auth();
+if (typeof firebase !== 'undefined') {
+  if (firebase.apps.length === 0) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  const dbId = "${firebaseConfig.firestoreDatabaseId || ''}";
+  let dbInstance = null;
+  try {
+    if (dbId && dbId !== "(default)") {
+      dbInstance = firebase.app().firestore(dbId);
+    } else {
+      dbInstance = firebase.firestore();
+    }
+  } catch (e) {
+    try {
+      dbInstance = firebase.firestore();
+    } catch (err) {
+      console.warn("Firestore Database Connection Warning:", err);
+    }
+  }
+  window.db = dbInstance;
+  try {
+    window.auth = firebase.auth ? firebase.auth() : null;
+  } catch (err) {
+    window.auth = null;
+  }
 }
 `;
 
@@ -703,7 +724,7 @@ export const generateSite = createServerFn({ method: "POST" })
 
     const userFirebaseSnippet = `\nBACKEND FIREBASE (PROJET CONFIGURÉ) :
 - Project ID : ${firebaseConfig.projectId}
-- Firestore DB ID : ${firebaseConfig.firestoreDatabaseId}
+- Firestore DB ID : ${firebaseConfig.firestoreDatabaseId || "(default)"}
 - API Key : ${firebaseConfig.apiKey}
 - Auth Domain : ${firebaseConfig.authDomain}
 - Storage Bucket : ${firebaseConfig.storageBucket}
@@ -712,7 +733,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
      <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
      <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
      <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  2) Créer \`firebase.js\` :
+  2) Créer \`firebase.js\` (RACCORDEMENT DE BASE DE DONNÉES EXACTE) :
      const firebaseConfig = {
        apiKey: "${firebaseConfig.apiKey}",
        authDomain: "${firebaseConfig.authDomain}",
@@ -720,10 +741,20 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
        storageBucket: "${firebaseConfig.storageBucket}",
        appId: "${firebaseConfig.appId}"
      };
-     firebase.initializeApp(firebaseConfig);
-     window.db = firebase.firestore();
-     window.auth = firebase.auth();
-  3) GESTION DES UTILISATEURS DU SITE ET LIMITE DES 200 UTILISATEURS (CRITIQUE) :
+     if (typeof firebase !== 'undefined') {
+       if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
+       const dbId = "${firebaseConfig.firestoreDatabaseId || ''}";
+       try {
+         window.db = (dbId && dbId !== "(default)") ? firebase.app().firestore(dbId) : firebase.firestore();
+       } catch (e) {
+         try { window.db = firebase.firestore(); } catch(err) { window.db = null; }
+       }
+       try { window.auth = firebase.auth(); } catch(e) { window.auth = null; }
+     }
+  3) SÉCURISATION ET TOLÉRANCE AUX ERREURS DE CONNEXION (SANS ERREUR BLOQUANTE) :
+     - Entourer TOUTES les opérations Firestore (lecture/écriture/connexion) de blocs try/catch.
+     - Si Firestore renvoie une erreur de connexion ou de permissions, enregistrer/lire les données dans le \`localStorage\` du navigateur afin que l'inscription, la connexion et le panneau d'administration fonctionnent TOUJOURS de manière fluide et sans afficher de message d'erreur bloquant.
+  4) GESTION DES UTILISATEURS DU SITE ET LIMITE DES 200 UTILISATEURS (CRITIQUE) :
      - Enregistre les utilisateurs du site généré dans la collection Firestore \`app_users\` avec \`projectId: "${projectId}"\`.
      - RÈGLE DES 200 UTILISATEURS DU PLAN GRATUIT :
        Pour le plan gratuit (ou si le plan PRO est expiré au-delà de 30 jours), le nombre d'utilisateurs autorisés est strictement limité à 200 au maximum.
@@ -731,7 +762,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
        Si le total des utilisateurs dépasse 200, bloquer immédiatement l'inscription et la connexion avec le message :
        "❌ Limite de 200 utilisateurs atteinte pour le plan gratuit. Le propriétaire du site doit souscrire au Plan PRO pour un nombre d'utilisateurs illimité."
      - Si le plan du propriétaire est PRO (valide 30 jours), le nombre d'utilisateurs est ILLIMITÉ pendant cette période.
-  4) Stocker les données et contenus du site dans la collection \`app_data\` (\`projectId: "${projectId}"\`).`;
+  5) Stocker les données et contenus du site dans la collection \`app_data\` (\`projectId: "${projectId}"\`).`;
 
     const userPlan = (profile?.plan as "free" | "pro") ?? "free";
     const messages = [
