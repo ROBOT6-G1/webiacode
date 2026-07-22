@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { db } from "@/integrations/firebase/client";
+import { db, getAuthToken } from "@/integrations/firebase/client";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useServerFn } from "@tanstack/react-start";
 import { generateSite } from "@/lib/ai.functions";
@@ -131,7 +131,14 @@ function ProjectView() {
     setLoading(true);
     setStreamFile(null);
     try {
-      const res = await generate({ data: { projectId, prompt: userPrompt } });
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await generate({
+        data: { projectId, prompt: userPrompt },
+        headers,
+      });
       const entries = Object.entries(res.files || {});
       for (const [path, content] of entries) {
         const preview = content.slice(0, 600);
@@ -189,7 +196,11 @@ function ProjectView() {
   const doPublish = async () => {
     setPublishing(true);
     try {
-      const res = await publish({ data: { projectId } });
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await publish({ data: { projectId }, headers });
       if (res.url) {
         toast.success("Publié ! " + res.url);
         window.open(res.url, "_blank");

@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { auth, db } from "@/integrations/firebase/client";
+import { auth, db, getAuthToken } from "@/integrations/firebase/client";
 import { doc, getDoc, collection, query, getDocs, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -64,7 +64,11 @@ function PaymentsTab() {
   });
   const act = async (id: string, status: "validated" | "rejected") => {
     try {
-      await approve({ data: { paymentId: id, action: status } });
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      await approve({ data: { paymentId: id, action: status }, headers });
       toast.success(`Paiement ${status}`);
       queryClient.invalidateQueries();
     } catch (err) { toast.error(err instanceof Error ? err.message : String(err)); }

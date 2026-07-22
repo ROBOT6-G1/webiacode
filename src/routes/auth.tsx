@@ -85,8 +85,19 @@ function AuthPage() {
         await ensureProfile(res.user.uid, res.user.email || "", res.user.displayName || "");
         navigate({ to: "/app" });
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur Google sign-in");
+    } catch (err: unknown) {
+      const errorObj = err as { code?: string; message?: string };
+      const code = errorObj?.code || "";
+      const msg = errorObj?.message || String(err);
+      if (code === "auth/unauthorized-domain" || msg.includes("unauthorized-domain")) {
+        const host = typeof window !== "undefined" ? window.location.hostname : "votre-domaine.vercel.app";
+        toast.error(
+          `Domaine non autorisé dans Firebase (${host}). Pour activer la connexion Google sur Vercel, ajoutez ${host} dans la Console Firebase > Authentication > Paramètres > Domaines autorisés. Vous pouvez vous connecter par Email & Mot de passe ci-dessous.`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.error(msg || "Erreur Google sign-in");
+      }
     }
   };
 

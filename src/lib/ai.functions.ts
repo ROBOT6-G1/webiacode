@@ -178,23 +178,38 @@ async function callAdminKey(
       parts: [{ text: m.content }],
     }));
     const systemInstruction = messages.find((m) => m.role === "system")?.content;
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: geminiMessages,
-          systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 32768 },
-        }),
+
+    const candidateModels = [model, "gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"];
+    let lastErr: Error | null = null;
+
+    for (const mName of candidateModels) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${mName}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: geminiMessages,
+              systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+              generationConfig: { temperature: 0.7, maxOutputTokens: 32768 },
+            }),
+          }
+        );
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Gemini ${mName} (${res.status}): ${errText}`);
+        }
+        const json = await res.json();
+        const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        if (!text) throw new Error("Empty text returned from Gemini");
+        const usage = json.usageMetadata;
+        return { text, tokens: (usage?.totalTokenCount as number) ?? 0 };
+      } catch (e) {
+        lastErr = e instanceof Error ? e : new Error(String(e));
       }
-    );
-    if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-    const json = await res.json();
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    const usage = json.usageMetadata;
-    return { text, tokens: (usage?.totalTokenCount as number) ?? 0 };
+    }
+    throw lastErr || new Error("Failed calling Gemini API");
   }
 
   const baseUrl = OPENAI_COMPAT_BASE[provider];
@@ -343,30 +358,84 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     }
     messages.push({ role: "user", content: userMsg });
 
+    const geminiEnvKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     const lovableKey = process.env.LOVABLE_API_KEY;
     let result: { text: string; tokens: number } | null = null;
 
     if (useByok) {
-      result = await callAdminKey(integ!.ai_api_key!, integ!.ai_provider!, messages);
-    } else {
       try {
-        if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
-        result = await callGateway(lovableKey, messages);
-      } catch {
-        const keys = await adminDb.getAdminKeys();
-        if (keys && keys.length > 0) {
-          const k = keys[0];
-          result = await callAdminKey(k.key_value, k.provider || "google", messages);
-          await adminDb.updateAdminKey(k.id, {
-            request_count: (k.request_count || 0) + 1,
-            tokens_used: (k.tokens_used || 0) + (result.tokens || 0),
-            last_used_at: new Date().toISOString(),
-          });
-        }
+        result = await callAdminKey(integ!.ai_api_key!, integ!.ai_provider!, messages);
+      } catch (err) {
+        console.warn("BYOK failed:", err);
       }
     }
 
-    if (!result) throw new Error("Aucun résultat IA");
+    if (!result && geminiEnvKey) {
+      try {
+        result = await callAdminKey(geminiEnvKey, "google", messages);
+      } catch (err) {
+        console.warn("System GEMINI_API_KEY failed:", err);
+      }
+    }
+
+    if (!result && lovableKey) {
+      try {
+        result = await callGateway(lovableKey, messages);
+      } catch (err) {
+        console.warn("LOVABLE_API_KEY gateway failed:", err);
+      }
+    }
+
+    if (!result) {
+      try {
+        const keys = await adminDb.getAdminKeys();
+        if (keys && keys.length > 0) {
+          for (const k of keys) {
+            if (k.active === false) continue;
+            try {
+              result = await callAdminKey(k.key_value, k.provider || "google", messages);
+              if (result) {
+                await adminDb.updateAdminKey(k.id, {
+                  request_count: (k.request_count || 0) + 1,
+                  tokens_used: (k.tokens_used || 0) + (result.tokens || 0),
+                  last_used_at: new Date().toISOString(),
+                });
+                break;
+              }
+            } catch (kErr) {
+              console.warn(`Admin key ${k.id} failed:`, kErr);
+            }
+          }
+        }
+      } catch (dbErr) {
+        console.warn("Failed retrieving admin keys:", dbErr);
+      }
+    }
+
+    if (!result) {
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash:free",
+            messages,
+            temperature: 0.7,
+          }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const text = json.choices?.[0]?.message?.content ?? "";
+          if (text) {
+            result = { text, tokens: json.usage?.total_tokens ?? 0 };
+          }
+        }
+      } catch (orErr) {
+        console.warn("OpenRouter fallback failed:", orErr);
+      }
+    }
+
+    if (!result) throw new Error("Aucun résultat IA — Veuillez contacter l'administrateur pour ajouter une clé API IA.");
 
     const parsed = extractJson(result.text);
     if (!parsed) throw new Error("Réponse invalide de l'IA");
