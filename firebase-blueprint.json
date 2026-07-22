@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "profiles": {
+      "title": "Profiles",
+      "description": "User profiles with credits, plan, and subscriptions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "display_name": { "type": "string" },
+        "credits": { "type": "number" },
+        "plan": { "type": "string" },
+        "plan_expires_at": { "type": "string" },
+        "ai_sub_expires_at": { "type": "string" },
+        "referral_code": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["email", "credits", "plan"]
+    },
+    "user_roles": {
+      "title": "User Roles",
+      "description": "Admin roles mapping",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["user_id", "role"]
+    },
+    "projects": {
+      "title": "Projects",
+      "description": "User created web projects",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "name": { "type": "string" },
+        "files": { "type": "object" },
+        "html_content": { "type": "string" },
+        "css_content": { "type": "string" },
+        "js_content": { "type": "string" },
+        "site_type": { "type": "string" },
+        "whatsapp_number": { "type": "string" },
+        "pwa_enabled": { "type": "boolean" },
+        "github_repo": { "type": "string" },
+        "vercel_project_id": { "type": "string" },
+        "vercel_url": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["user_id", "name"]
+    },
+    "messages": {
+      "title": "Messages",
+      "description": "Chat history for project generation",
+      "type": "object",
+      "properties": {
+        "project_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "role": { "type": "string" },
+        "content": { "type": "string" },
+        "tokens_used": { "type": "number" },
+        "credits_used": { "type": "number" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["project_id", "user_id", "role", "content"]
+    },
+    "payments": {
+      "title": "Payments",
+      "description": "Payment requests for credits or plans",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "kind": { "type": "string" },
+        "amount_ar": { "type": "number" },
+        "credits": { "type": "number" },
+        "reference": { "type": "string" },
+        "status": { "type": "string" },
+        "proof_url": { "type": "string" },
+        "validated_at": { "type": "string" },
+        "validated_by": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["user_id", "kind", "amount_ar", "status"]
+    },
+    "user_integrations": {
+      "title": "User Integrations",
+      "description": "Tokens and credentials for GitHub, Vercel, and custom AI keys",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "github_token": { "type": "string" },
+        "github_username": { "type": "string" },
+        "vercel_token": { "type": "string" },
+        "vercel_team_id": { "type": "string" },
+        "ai_provider": { "type": "string" },
+        "ai_api_key": { "type": "string" },
+        "supabase_url": { "type": "string" },
+        "supabase_anon_key": { "type": "string" },
+        "supabase_service_role_key": { "type": "string" }
+      },
+      "required": ["user_id"]
+    },
+    "admin_gemini_keys": {
+      "title": "Admin Gemini Keys",
+      "description": "Admin AI API key pool",
+      "type": "object",
+      "properties": {
+        "label": { "type": "string" },
+        "key_value": { "type": "string" },
+        "active": { "type": "boolean" },
+        "provider": { "type": "string" },
+        "tokens_used": { "type": "number" },
+        "request_count": { "type": "number" },
+        "error_count": { "type": "number" },
+        "cooldown_until": { "type": "string" },
+        "last_used_at": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["key_value", "active"]
+    },
+    "custom_domains": {
+      "title": "Custom Domains",
+      "description": "Custom domains connected by users",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "domain": { "type": "string" },
+        "status": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["user_id", "domain", "status"]
+    },
+    "support_tickets": {
+      "title": "Support Tickets",
+      "description": "Customer support tickets",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "message": { "type": "string" },
+        "image_url": { "type": "string" },
+        "status": { "type": "string" },
+        "admin_reply": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["user_id", "message", "status"]
+    },
+    "referrals": {
+      "title": "Referrals",
+      "description": "User referral tracking",
+      "type": "object",
+      "properties": {
+        "referrer_id": { "type": "string" },
+        "referred_user_id": { "type": "string" },
+        "bonus_granted": { "type": "boolean" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["referrer_id", "referred_user_id"]
+    },
+    "app_users": {
+      "title": "App End Users",
+      "description": "End users registered on websites generated by DEVWEBIA",
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string" },
+        "email": { "type": "string" },
+        "user_number": { "type": "number" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["projectId", "email"]
+    },
+    "app_data": {
+      "title": "App Data",
+      "description": "Generic store for content and collections generated by DEVWEBIA apps",
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string" },
+        "collection_name": { "type": "string" },
+        "data": { "type": "object" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["projectId", "collection_name"]
+    }
+  }
+}

@@ -1,0 +1,1 @@
+ALTER TABLE public.admin_gemini_keys ADD COLUMN IF NOT EXISTS tokens_used INTEGER NOT NULL DEFAULT 0; ALTER TABLE public.admin_gemini_keys ADD COLUMN IF NOT EXISTS cooldown_until TIMESTAMPTZ;

@@ -1,0 +1,2 @@
+ALTER TABLE public.user_integrations ADD COLUMN IF NOT EXISTS ai_provider text, ADD COLUMN IF NOT EXISTS ai_api_key text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS ai_sub_expires_at timestamptz;

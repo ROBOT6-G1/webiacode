@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Profiles
+    match /profiles/{userId} {
+      allow read, write: if true;
+    }
+
+    // User Roles
+    match /user_roles/{roleId} {
+      allow read, write: if true;
+    }
+
+    // Projects
+    match /projects/{projectId} {
+      allow read, write: if true;
+    }
+
+    // Messages
+    match /messages/{messageId} {
+      allow read, write: if true;
+    }
+
+    // Payments
+    match /payments/{paymentId} {
+      allow read, write: if true;
+    }
+
+    // User Integrations
+    match /user_integrations/{userId} {
+      allow read, write: if true;
+    }
+
+    // Admin Gemini Keys
+    match /admin_gemini_keys/{keyId} {
+      allow read, write: if true;
+    }
+
+    // Custom Domains
+    match /custom_domains/{domainId} {
+      allow read, write: if true;
+    }
+
+    // Support Tickets
+    match /support_tickets/{ticketId} {
+      allow read, write: if true;
+    }
+
+    // Referrals
+    match /referrals/{refId} {
+      allow read, write: if true;
+    }
+
+    // End-user data for generated apps (DEVWEBIA websites)
+    match /app_users/{userId} {
+      allow read, write: if true;
+    }
+
+    match /app_data/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
