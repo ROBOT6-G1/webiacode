@@ -51,13 +51,29 @@ export const publishSite = createServerFn({ method: "POST" })
     const repoName = project.github_repo?.split("/").pop() || `devwebia-${slugify(project.name)}-${data.projectId.slice(0, 6)}`;
     let repoFullName = project.github_repo ?? `${ghUser}/${repoName}`;
 
-    if (!project.github_repo) {
+    let repoExists = false;
+    if (project.github_repo) {
+      const checkRes = await fetch(`https://api.github.com/repos/${project.github_repo}`, {
+        headers: {
+          Authorization: `Bearer ${ghToken}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "DEVWEBIA",
+        },
+      });
+      if (checkRes.ok) {
+        repoExists = true;
+        repoFullName = project.github_repo;
+      }
+    }
+
+    if (!repoExists) {
       const createRepoRes = await fetch("https://api.github.com/user/repos", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${ghToken}`,
           Accept: "application/vnd.github+json",
           "User-Agent": "DEVWEBIA",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           name: repoName,
@@ -66,15 +82,28 @@ export const publishSite = createServerFn({ method: "POST" })
           auto_init: true,
         }),
       });
-      if (!createRepoRes.ok && createRepoRes.status !== 422) {
-        throw new Error(`GitHub create repo: ${createRepoRes.status} ${await createRepoRes.text()}`);
+
+      if (createRepoRes.ok) {
+        const createJson = (await createRepoRes.json()) as { full_name?: string };
+        if (createJson.full_name) {
+          repoFullName = createJson.full_name;
+        } else {
+          repoFullName = `${ghUser}/${repoName}`;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      } else if (createRepoRes.status === 422) {
+        repoFullName = `${ghUser}/${repoName}`;
+      } else {
+        const errText = await createRepoRes.text();
+        throw new Error(`GitHub create repo (${createRepoRes.status}): ${errText}`);
       }
-      repoFullName = `${ghUser}/${repoName}`;
     }
 
     for (const [path, content] of Object.entries(files)) {
+      const encodedPath = path.split("/").map((p) => encodeURIComponent(p)).join("/");
+
       let sha: string | undefined;
-      const getRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodeURIComponent(path)}`, {
+      const getRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
         headers: {
           Authorization: `Bearer ${ghToken}`,
           Accept: "application/vnd.github+json",
@@ -85,7 +114,8 @@ export const publishSite = createServerFn({ method: "POST" })
         const j = (await getRes.json()) as { sha?: string };
         sha = j.sha;
       }
-      const putRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodeURIComponent(path)}`, {
+
+      let putRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${ghToken}`,
@@ -99,8 +129,28 @@ export const publishSite = createServerFn({ method: "POST" })
           sha,
         }),
       });
+
+      if (putRes.status === 404) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        putRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${ghToken}`,
+            Accept: "application/vnd.github+json",
+            "User-Agent": "DEVWEBIA",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: `DEVWEBIA update ${path}`,
+            content: toBase64(content),
+            sha,
+          }),
+        });
+      }
+
       if (!putRes.ok) {
-        throw new Error(`GitHub upload ${path}: ${putRes.status} ${await putRes.text()}`);
+        const errTxt = await putRes.text();
+        throw new Error(`GitHub upload ${path}: ${putRes.status} ${errTxt}`);
       }
     }
 
