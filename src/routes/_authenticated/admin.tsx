@@ -2,7 +2,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { auth, db, getAuthToken } from "@/integrations/firebase/client";
 import { doc, getDoc, collection, query, getDocs, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { approvePayment } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +48,6 @@ function Admin() {
 
 function PaymentsTab() {
   const queryClient = useQueryClient();
-  const approve = useServerFn(approvePayment);
   const q = useQuery({
     queryKey: ["admin-payments"],
     queryFn: async () => {
@@ -73,7 +71,7 @@ function PaymentsTab() {
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      await approve({ data: { paymentId: id, action: status }, headers });
+      await approvePayment({ data: { paymentId: id, action: status }, headers });
       toast.success(`Paiement ${status}`);
       queryClient.invalidateQueries();
     } catch (err) { toast.error(err instanceof Error ? err.message : String(err)); }

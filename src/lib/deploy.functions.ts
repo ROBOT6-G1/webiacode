@@ -21,7 +21,7 @@ function slugify(s: string): string {
 
 export const publishSite = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator((input: unknown) => z.object({ projectId: z.string() }).parse(input))
+  .validator((input: unknown) => z.object({ projectId: z.string() }).parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
 

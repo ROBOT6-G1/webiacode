@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { db, getAuthToken } from "@/integrations/firebase/client";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { useServerFn } from "@tanstack/react-start";
 import { generateSite } from "@/lib/ai.functions";
 import { publishSite } from "@/lib/deploy.functions";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -94,8 +93,6 @@ function ProjectView() {
   const [upToDate, setUpToDate] = useState(false);
   const [tab, setTab] = useState("chat");
   const [streamFile, setStreamFile] = useState<{ path: string; content: string } | null>(null);
-  const generate = useServerFn(generateSite);
-  const publish = useServerFn(publishSite);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const project = useQuery({
@@ -135,7 +132,7 @@ function ProjectView() {
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await generate({
+      const res = await generateSite({
         data: { projectId, prompt: userPrompt },
         headers,
       });
@@ -200,7 +197,7 @@ function ProjectView() {
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await publish({ data: { projectId }, headers });
+      const res = await publishSite({ data: { projectId }, headers });
       if (res.url) {
         toast.success("Publié ! " + res.url);
         window.open(res.url, "_blank");

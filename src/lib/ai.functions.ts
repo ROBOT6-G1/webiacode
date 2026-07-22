@@ -669,7 +669,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 export const generateSite = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator((input: unknown) => inputSchema.parse(input))
+  .validator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
 

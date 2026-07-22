@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useServerFn } from "@tanstack/react-start";
 import { generateSite } from "@/lib/ai.functions";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -59,7 +58,6 @@ function ChatIndex() {
   const [pwa, setPwa] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const generate = useServerFn(generateSite);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -74,7 +72,7 @@ function ChatIndex() {
     }
     setLoading(true);
     try {
-      const res = await generate({
+      const res = await generateSite({
         data: {
           prompt: prompt.trim(),
           siteType,

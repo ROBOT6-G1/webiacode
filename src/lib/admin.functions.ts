@@ -5,7 +5,7 @@ import { z } from "zod";
 
 export const approvePayment = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z.object({
       paymentId: z.string(),
       action: z.enum(["validated", "rejected"]),
