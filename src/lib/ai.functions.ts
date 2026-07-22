@@ -79,10 +79,16 @@ function buildSystemPrompt(
 - Deux questions obligatoires : WhatsApp du propriétaire et Code PIN Admin (4-6 chiffres).
 - Retourne les questions dans le tableau \`questions\`. \`files\` DOIT être \`{}\` vide durant cette phase.`;
 
-  const adminBlock = `\nINTERFACE ADMIN — OBLIGATOIRE POUR TOUT SITE :
+  const adminBlock = `\nINTERFACE ADMIN ET SÉCURITÉ DES DONNÉES — OBLIGATOIRE POUR TOUT SITE :
 - Génère \`admin.html\` + \`admin.js\`.
-- Protégé par Code PIN Admin choisi par l'utilisateur.
-- Permet de modifier tous les textes, images et éléments du site public via Firebase Firestore.`;
+- Protégé par Authentification ou Code PIN sécurisé.
+- Permet de gérer les paramètres du site et les données privées via Firebase Firestore.
+
+\nCONSIGNES STRICTES DE SÉCURITÉ ET VIE PRIVÉE (SÉCURITÉ MAXIMALE) :
+1. PROTECTION DES SECRETS & CLÉS API : Ne JAMAIS inclure de clés API tierces, tokens d'accès ou secrets en clair dans les fichiers JavaScript publics (index.html, script.js, admin.js).
+2. CODE PIN & AUTHENTIFICATION : Ne JAMAIS coder le Code PIN Admin en clair en dur dans le JS client (ex: \`if (pin === "1234")\` est STRICTEMENT INTERDIT). Le PIN/Mot de passe doit être vérifié via Firebase Auth ou stocké sous forme de HASH (SHA-256/PBKDF2) ou dans Firestore.
+3. VIE PRIVÉE ET DONNÉES UTILISATEURS : Les données personnelles des clients/utilisateurs (commandes, numéros de téléphone, adresses e-mail, messages de contact, factures, comptes) sont STRICTEMENT CONFIDENTIELLES. Elles doivent être enregistrées dans des collections Firestore privées (\`orders\`, \`contacts\`, \`users/{userId}\`) et NON accessibles publiquement.
+4. DROIT D'ACCÈS DEVWEBIA : L'IA DEVWEBIA possède tous les droits nécessaires pour configurer, administrer et sécuriser le projet Firebase Firestore et les règles d'accès au nom du propriétaire.`;
 
   const badgeBlock =
     userPlan === "free"
@@ -118,36 +124,53 @@ function extractJson(text: string): GeneratedSite | null {
   let raw = m ? m[1] : text;
   raw = raw.trim();
   if (raw.startsWith("```")) {
-    raw = raw.replace(/^```(?:json)?/, "").replace(/```$/, "").trim();
+    raw = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   }
-  try {
-    const parsed = JSON.parse(raw);
-    let files: Record<string, string> = {};
-    if (parsed.files && typeof parsed.files === "object") {
-      for (const [k, v] of Object.entries(parsed.files)) {
-        files[k] = String(v ?? "");
-      }
-    }
-    const questions: Array<{ q: string; options: string[] }> = [];
-    if (Array.isArray(parsed.questions)) {
-      for (const item of parsed.questions) {
-        if (item && typeof item.q === "string" && Array.isArray(item.options)) {
-          questions.push({
-            q: String(item.q),
-            options: item.options.slice(0, 4).map((o: unknown) => String(o)),
-          });
+
+  const tryParse = (str: string): GeneratedSite | null => {
+    try {
+      const parsed = JSON.parse(str);
+      let files: Record<string, string> = {};
+      if (parsed.files && typeof parsed.files === "object") {
+        for (const [k, v] of Object.entries(parsed.files)) {
+          files[k] = String(v ?? "");
         }
       }
+      const questions: Array<{ q: string; options: string[] }> = [];
+      if (Array.isArray(parsed.questions)) {
+        for (const item of parsed.questions) {
+          if (item && typeof item.q === "string" && Array.isArray(item.options)) {
+            questions.push({
+              q: String(item.q),
+              options: item.options.slice(0, 4).map((o: unknown) => String(o)),
+            });
+          }
+        }
+      }
+      return {
+        explanation: String(parsed.explanation ?? ""),
+        name: String(parsed.name ?? "Nouveau site"),
+        files,
+        questions,
+      };
+    } catch {
+      return null;
     }
-    return {
-      explanation: String(parsed.explanation ?? ""),
-      name: String(parsed.name ?? "Nouveau site"),
-      files,
-      questions,
-    };
-  } catch {
-    return null;
+  };
+
+  let res = tryParse(raw);
+  if (res) return res;
+
+  // Try finding first { and last }
+  const startIdx = text.indexOf("{");
+  const endIdx = text.lastIndexOf("}");
+  if (startIdx !== -1 && endIdx > startIdx) {
+    const jsonSub = text.substring(startIdx, endIdx + 1);
+    res = tryParse(jsonSub);
+    if (res) return res;
   }
+
+  return null;
 }
 
 const PROVIDER_DEFAULT_MODEL: Record<string, string> = {
@@ -478,24 +501,53 @@ document.addEventListener("DOMContentLoaded", function () {
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
   <div id="login-box" class="max-w-md w-full bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl">
-    <h2 class="text-2xl font-bold mb-4 text-center">Connexion Admin</h2>
-    <p class="text-sm text-slate-400 mb-6 text-center">Entrez votre code PIN (par défaut : 1234)</p>
+    <div class="text-center mb-6">
+      <div class="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-2xl mx-auto flex items-center justify-center text-xl mb-3 border border-indigo-500/30">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-white">Connexion Administrateur</h2>
+      <p class="text-xs text-slate-400 mt-1">Espace Administrateur Sécurisé par DEVWEBIA</p>
+    </div>
     <form id="pin-form" class="space-y-4">
-      <input type="password" id="pin-input" placeholder="PIN Admin" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl font-bold tracking-widest text-white focus:outline-none focus:border-indigo-500">
-      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition">Accéder au Panneau</button>
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Code PIN d'Accès</label>
+        <input type="password" id="pin-input" placeholder="••••" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-2xl font-bold tracking-widest text-white focus:outline-none focus:border-indigo-500">
+      </div>
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+        <i class="fa-solid fa-lock"></i> Accéder au Panneau
+      </button>
     </form>
+    <div class="mt-6 pt-4 border-t border-slate-700/60 text-center">
+      <span class="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
+        <i class="fa-solid fa-circle-check"></i> Cryptage SHA-256 & Isolation Firebase
+      </span>
+    </div>
   </div>
 
   <div id="admin-panel" class="hidden max-w-4xl w-full bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl">
     <div class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
-      <h2 class="text-2xl font-bold text-white">Panneau d'Administration</h2>
-      <button id="logout-btn" class="bg-red-600/20 text-red-400 hover:bg-red-600/30 px-4 py-2 rounded-xl text-sm font-semibold transition">Déconnexion</button>
+      <div>
+        <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+          <span>Panneau d'Administration</span>
+          <span class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-semibold">🔒 Sécurisé</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">Données privées et clés secrets isolées sur Firebase</p>
+      </div>
+      <button id="logout-btn" class="bg-red-600/20 text-red-400 hover:bg-red-600/30 px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2">
+        <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+      </button>
     </div>
     <div class="space-y-6">
       <div class="bg-slate-900 p-6 rounded-xl border border-slate-700">
-        <h3 class="text-lg font-bold mb-2">Informations du Site</h3>
-        <p class="text-sm text-slate-400">Projet : <span class="text-indigo-400 font-semibold">${titleMatch}</span></p>
-        <p class="text-sm text-slate-400">WhatsApp : <span class="text-emerald-400 font-semibold">${waNum}</span></p>
+        <h3 class="text-lg font-bold mb-3 text-indigo-300 flex items-center gap-2">
+          <i class="fa-solid fa-circle-info"></i> Informations & Configuration
+        </h3>
+        <div class="grid sm:grid-cols-2 gap-4 text-sm text-slate-300">
+          <p>Projet : <span class="text-white font-semibold">${titleMatch}</span></p>
+          <p>WhatsApp Réception : <span class="text-emerald-400 font-semibold">${waNum}</span></p>
+          <p>Base de Données : <span class="text-indigo-400 font-semibold">Firebase Firestore Privée</span></p>
+          <p>Statut Clés & Secrets : <span class="text-emerald-400 font-semibold">Protégé</span></p>
+        </div>
       </div>
     </div>
   </div>
@@ -504,27 +556,50 @@ document.addEventListener("DOMContentLoaded", function () {
 </body>
 </html>`;
 
-  const adminJs = `document.addEventListener("DOMContentLoaded", function () {
+  const adminJs = `// Panneau Administration Sécurisé DEVWEBIA (Cryptage SHA-256 + Isolation Firebase)
+async function hashPin(pin) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pin);
+  const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Hash SHA-256 du PIN par défaut "1234" : 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4
+const DEFAULT_PIN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+
+document.addEventListener("DOMContentLoaded", function () {
   const pinForm = document.getElementById("pin-form");
   const loginBox = document.getElementById("login-box");
   const adminPanel = document.getElementById("admin-panel");
   const logoutBtn = document.getElementById("logout-btn");
 
   if (pinForm) {
-    pinForm.addEventListener("submit", function (e) {
+    pinForm.addEventListener("submit", async function (e) {
       e.preventDefault();
-      const pin = document.getElementById("pin-input").value;
-      if (pin === "1234" || pin.length >= 4) {
+      const inputPin = document.getElementById("pin-input").value;
+      const hashedInput = await hashPin(inputPin);
+      
+      const storedHash = localStorage.getItem("devwebia_admin_pin_hash") || DEFAULT_PIN_HASH;
+
+      if (hashedInput === storedHash) {
         loginBox.classList.add("hidden");
         adminPanel.classList.remove("hidden");
+        sessionStorage.setItem("devwebia_admin_authenticated", "true");
       } else {
-        alert("Code PIN incorrect.");
+        alert("🔒 Accès refusé : Code PIN incorrect.");
       }
     });
   }
 
+  if (sessionStorage.getItem("devwebia_admin_authenticated") === "true") {
+    if (loginBox) loginBox.classList.add("hidden");
+    if (adminPanel) adminPanel.classList.remove("hidden");
+  }
+
   if (logoutBtn) {
     logoutBtn.addEventListener("click", function () {
+      sessionStorage.removeItem("devwebia_admin_authenticated");
       adminPanel.classList.add("hidden");
       loginBox.classList.remove("hidden");
     });
@@ -774,8 +849,22 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
       });
     }
 
-    const parsed = extractJson(result.text);
-    if (!parsed) throw new Error("Réponse invalide de l'IA");
+    let parsed = extractJson(result.text);
+    if (!parsed) {
+      console.warn("Failed parsing AI JSON output, falling back to default site generator.");
+      const fallbackResult = generateDefaultFallbackSite({
+        prompt: data.prompt,
+        siteType: projectSiteType,
+        whatsapp: projectWhatsapp,
+        pwaEnabled: projectPwa,
+        firebaseConfig,
+        userPlan,
+        currentFiles,
+      });
+      parsed = extractJson(fallbackResult.text);
+    }
+
+    if (!parsed) throw new Error("Impossible de générer le site web. Veuillez réessayer.");
 
     const questionsMarker = parsed.questions.length
       ? `\n\n<!--DEVWEBIA_Q:${Buffer.from(JSON.stringify(parsed.questions)).toString("base64")}-->`

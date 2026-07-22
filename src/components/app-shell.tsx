@@ -47,7 +47,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       const profileData = snap.exists() ? snap.data() : null;
 
       const roleSnap = await getDoc(doc(db, "user_roles", user.uid));
-      const isAdmin = roleSnap.exists() && roleSnap.data()?.role === "admin";
+      const isAdminRole = roleSnap.exists() && roleSnap.data()?.role === "admin";
+      const isSuperAdminEmail =
+        user.email === "horlandobe@gmail.com" ||
+        user.email === "boutiquemevasoa@gmail.com";
+      const isAdmin = isAdminRole || isSuperAdminEmail;
       return { ...profileData, isAdmin };
     },
   });

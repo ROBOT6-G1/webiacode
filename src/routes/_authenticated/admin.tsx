@@ -16,6 +16,11 @@ export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async () => {
     const user = auth.currentUser;
     if (!user) throw redirect({ to: "/auth" });
+    const isSuperAdminEmail =
+      user.email === "horlandobe@gmail.com" ||
+      user.email === "boutiquemevasoa@gmail.com";
+    if (isSuperAdminEmail) return;
+
     const snap = await getDoc(doc(db, "user_roles", user.uid));
     if (!snap.exists() || snap.data()?.role !== "admin") throw redirect({ to: "/app" });
   },
