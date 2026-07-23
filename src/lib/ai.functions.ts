@@ -238,7 +238,7 @@ function buildSystemPrompt(
   const badgeBlock =
     userPlan === "free"
       ? `\nBADGE DEVWEBIA — OBLIGATOIRE (plan gratuit) :
-- Ajoute en bas à droite du site public le badge : "✨ Fait avec DEVWEBIA".`
+- Ajoute en bas à gauche du site public le badge interactif avec l'id "devwebia-badge". Il doit être un lien vers "https://devwebia.mg" avec une icône de baguette magique, et inclure un petit bouton 'X' à la fin pour le masquer au clic (onclick="document.getElementById('devwebia-badge').style.display='none'"). Exemple : <div id="devwebia-badge" class="fixed bottom-4 left-4 z-50 bg-slate-900/95 text-white text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-2xl border border-slate-700/50 backdrop-blur-md flex items-center gap-3 transition-all duration-300"><a href="https://devwebia.mg" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Fait avec DEVWEBIA</a><button onclick="document.getElementById('devwebia-badge').style.display='none'" class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-full w-5 h-5 flex items-center justify-center transition" title="Fermer"><i class="fa-solid fa-times"></i></button></div>`
       : `\nBADGE DEVWEBIA — plan Pro : ne pas ajouter de badge.`;
 
   return `Tu es DEVWEBIA, développeur front-end SENIOR et DESIGNER UI. Tu génères des sites web modernes avec Firebase et leur interface d'administration.
@@ -704,7 +704,14 @@ if (typeof firebase !== 'undefined') {
 
   const badgeHtml =
     userPlan === "free"
-      ? `<div class="fixed bottom-4 left-4 z-50 bg-slate-900/90 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg border border-slate-700 backdrop-blur">✨ Fait avec DEVWEBIA</div>`
+      ? `<div id="devwebia-badge" class="fixed bottom-4 left-4 z-50 bg-slate-900/95 text-white text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-2xl border border-slate-700/50 backdrop-blur-md flex items-center gap-3 transition-all duration-300">
+           <a href="https://devwebia.mg" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5">
+             <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Fait avec DEVWEBIA
+           </a>
+           <button onclick="document.getElementById('devwebia-badge').style.display='none'" class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-full w-5 h-5 flex items-center justify-center transition" title="Fermer">
+             <i class="fa-solid fa-times"></i>
+           </button>
+         </div>`
       : "";
 
   const indexHtml = `<!DOCTYPE html>
@@ -1842,8 +1849,14 @@ document.addEventListener("DOMContentLoaded", function () {
             <input type="file" id="cms-logoFile" accept="image/*" class="text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
             <input type="text" id="cms-siteLogo" placeholder="Ou collez une URL d'image" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
           </div>
-          <div id="logo-preview" class="mt-2 hidden">
-            <img id="logo-preview-img" src="" class="h-12 w-auto object-contain rounded-lg border border-slate-700 p-1">
+          <div id="logo-preview" class="mt-3 hidden bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-4 max-w-xl">
+            <div class="flex items-center gap-3 overflow-hidden">
+              <img id="logo-preview-img" src="" class="h-12 w-auto object-contain rounded-lg border border-slate-700 p-1 bg-slate-900 flex-shrink-0">
+              <span class="text-[10px] text-slate-400 truncate max-w-[200px]" id="logo-preview-path"></span>
+            </div>
+            <button type="button" id="cms-clearLogoBtn" class="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold rounded-lg border border-rose-500/20 transition flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-trash-can"></i> Fafana (Effacer)
+            </button>
           </div>
         </div>
       </div>
@@ -1871,6 +1884,15 @@ document.addEventListener("DOMContentLoaded", function () {
             <div class="flex gap-2 items-center">
               <input type="file" id="cms-heroImgFile" accept="image/*" class="text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
               <input type="text" id="cms-heroImage" placeholder="URL Image" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div id="hero-preview" class="mt-3 hidden bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-4 max-w-xl">
+              <div class="flex items-center gap-3 overflow-hidden">
+                <img id="hero-preview-img" src="" class="h-12 w-auto object-contain rounded-lg border border-slate-700 p-1 bg-slate-900 flex-shrink-0">
+                <span class="text-[10px] text-slate-400 truncate max-w-[200px]" id="hero-preview-path"></span>
+              </div>
+              <button type="button" id="cms-clearHeroBtn" class="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold rounded-lg border border-rose-500/20 transition flex items-center gap-1.5 whitespace-nowrap">
+                <i class="fa-solid fa-trash-can"></i> Fafana (Effacer)
+              </button>
             </div>
           </div>
         </div>
@@ -1914,37 +1936,80 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
 
         <!-- Google Search Console Assistant / Verification helper -->
-        <div class="bg-slate-950 p-4 rounded-xl border border-amber-500/20 space-y-3">
-          <p class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-            <i class="fa-solid fa-circle-info"></i> Torolalana handefasana azy amin'i Google Search Console :
+        <div class="bg-slate-950 p-5 rounded-2xl border border-amber-500/20 space-y-4">
+          <p class="text-xs font-bold text-amber-400 flex items-center gap-1.5 uppercase tracking-wider">
+            <i class="fa-solid fa-circle-info text-sm"></i> Torolalana sy Dingana Fampidirana amin'ny Google Search Console :
           </p>
-          <div class="text-[11px] text-slate-300 space-y-2.5 leading-relaxed">
-            <p><strong>1.</strong> Kitiho ity bokotra ity handikana ny rohin'ny site-nao (URL préfixe) :</p>
-            <div class="flex gap-2">
-              <span id="current-site-url-display" class="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 font-mono text-slate-400 text-[10px] flex-1 truncate select-all">https://site.vercel.app</span>
-              <button type="button" id="copy-site-url-btn" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 rounded-lg px-3 py-1.5 font-bold transition flex items-center gap-1 text-[11px] whitespace-nowrap">
-                <i class="fa-regular fa-copy"></i> Adikao rohy
-              </button>
+          
+          <div class="space-y-4">
+            <!-- STEP 1: Copy original link -->
+            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1.5">
+              <p class="text-[11px] font-semibold text-slate-300">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold mr-1.5">1</span>
+                Adikao ny rohy original an'ny site-nao (Lien original du site) :
+              </p>
+              <div class="flex gap-2">
+                <span id="current-site-url-display" class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 font-mono text-slate-400 text-[11px] flex-1 truncate select-all">https://site.vercel.app</span>
+                <button type="button" id="copy-site-url-btn" class="bg-slate-850 hover:bg-slate-750 text-amber-400 border border-slate-700 rounded-lg px-3 py-1.5 font-bold transition flex items-center gap-1.5 text-[11px] whitespace-nowrap">
+                  <i class="fa-regular fa-copy"></i> Adikao rohy
+                </button>
+              </div>
             </div>
-            <p><strong>2.</strong> Sokafy ny Google Search Console amin'ny alalan'ity bokotra ity :</p>
-            <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition shadow-md w-full justify-center">
-              <i class="fa-brands fa-google text-sm"></i> Sokafy ny Google Search Console <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-70"></i>
-            </a>
-            <p><strong>3.</strong> Safidio ilay safidy hoe <strong>"Préfixe de l'URL"</strong> (URL prefix) eo ankavanana, apetaho eo ilay rohy nodikainao teo, ary kitiho ny "Continuer".</p>
-            <p><strong>4.</strong> Adikao ilay balise meta (<strong>Balise HTML</strong>) omen'i Google, dia apetaho eto ambany :</p>
-          </div>
 
-          <div class="pt-2 border-t border-slate-800/80">
-            <label class="block text-xs font-bold text-amber-300 mb-1">🔑 Code de Vérification Google (Méta Tag na ID)</label>
-            <input type="text" id="cms-googleVerification" placeholder="Apetaho eto ilay balise (ohatra: &lt;meta name=&quot;google-site-verification&quot; content=&quot;...&quot; /&gt;)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
-            <p class="text-[10px] text-slate-400 mt-1">Afaka apetaho mivantana eto koa ny balise HTML manontolo, ny système-nao no hanadio sy haka ny ID ao anatiny ho azy amin'ny fomba matanjaka !</p>
+            <!-- STEP 2: Open Google Console -->
+            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-2">
+              <p class="text-[11px] font-semibold text-slate-300">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold mr-1.5">2</span>
+                Sokafy ny Google Console hampidirana ilay rohy nodikainao :
+              </p>
+              <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold px-4 py-2.5 rounded-lg text-xs transition shadow-md w-full justify-center">
+                <i class="fa-brands fa-google text-sm"></i> Sokafy ny Google Search Console <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-70"></i>
+              </a>
+              <p class="text-[10px] text-slate-400 leading-relaxed">
+                * Safidio ny safidy hoe <strong>"Préfixe de l'URL"</strong> (eo amin'ny ankavanana), apetaho eo ilay rohy nodikainao teo, ary kitiho ny "Continuer".
+              </p>
+            </div>
+
+            <!-- STEP 3: Enter Google Verification Tag -->
+            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-3">
+              <p class="text-[11px] font-semibold text-slate-300">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold mr-1.5">3</span>
+                Adikao ilay balise meta (<strong>Balise HTML</strong>) omen'i Google, apetaho eto ary <strong>kitiho ny "Handefa"</strong> :
+              </p>
+              <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-amber-300 uppercase">🔑 Code de Vérification Google (Méta Tag na ID)</label>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <input type="text" id="cms-googleVerification" placeholder="Apetaho eto ilay balise (ohatra: &lt;meta name=&quot;google-site-verification&quot; content=&quot;...&quot; /&gt;)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
+                  <button type="button" id="save-google-verification-btn" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-xl transition text-xs flex items-center justify-center gap-1.5 whitespace-nowrap shadow-md">
+                    <i class="fa-solid fa-paper-plane"></i> Handefa & Hitahiry
+                  </button>
+                </div>
+                <p class="text-[10px] text-slate-400">
+                  Azonao apetaka manontolo eto ilay balise meta, fa hodiovina sy halain'ny rafitra ho azy ny ID ao anatiny !
+                </p>
+              </div>
+            </div>
+
+            <!-- STEP 4: Visit site to verify tag active -->
+            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-2">
+              <p class="text-[11px] font-semibold text-slate-300">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold mr-1.5">4</span>
+                Sokafy ny site-nao mivantana mba hamantaran'i Google azy :
+              </p>
+              <button type="button" id="view-site-verify-btn" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition shadow-md w-full justify-center">
+                <i class="fa-solid fa-earth-africa text-sm"></i> Hijery & Hanamarina ny Tranonkala mivantana <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-70"></i>
+              </button>
+              <p class="text-[10px] text-slate-400">
+                * Rehefa misokatra ny site-nao dia miverena any amin'ny Google Search Console ary kitiho ny bokotra <strong>"Valider"</strong> na <strong>"Vérifier"</strong> dia hanao succès izany !
+              </p>
+            </div>
           </div>
         </div>
 
         <!-- Google Snippet Simulator -->
         <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
           <p class="text-xs text-slate-400 font-semibold mb-2">Aperçu direct du résultat Google Search :</p>
-          <p id="seo-preview-url" class="text-xs text-emerald-400 font-mono truncate">https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, "")}.mg › index.html</p>
+          <p id="seo-preview-url" class="text-xs text-emerald-400 font-mono truncate font-mono">https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, "")}.mg › index.html</p>
           <p id="seo-preview-title" class="text-base font-semibold text-blue-400 hover:underline cursor-pointer truncate">${titleMatch} — Site Officiel</p>
           <p id="seo-preview-desc" class="text-xs text-slate-300 line-clamp-2">${defaultHeroSubtitle}</p>
         </div>
@@ -2047,7 +2112,7 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
       </div>
 
-      <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-lg py-4 rounded-xl transition shadow-xl flex items-center justify-center gap-2">
+      <button type="submit" id="cms-submit-btn" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-lg py-4 rounded-xl transition shadow-xl flex items-center justify-center gap-2">
         <i class="fa-solid fa-floppy-disk"></i> Enregistrer et Publier les Modifications
       </button>
     </form>
@@ -2068,13 +2133,103 @@ async function hashPin(pin) {
 
 const DEFAULT_PIN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 
-function fileToBase64(file) {
+function compressAndResizeImage(file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}
+
+async function fileToBase64(file) {
+  try {
+    if (file.type.startsWith("image/")) {
+      return await compressAndResizeImage(file);
+    }
+  } catch (err) {
+    console.warn("Compression failed, using standard reader:", err);
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result);
     reader.onerror = error => reject(error);
   });
+}
+
+function showFloatingToast(message, type = "success") {
+  const existing = document.getElementById("devwebia-floating-toast");
+  if (existing) {
+    existing.remove();
+  }
+
+  const toast = document.createElement("div");
+  toast.id = "devwebia-floating-toast";
+  toast.className = "fixed top-6 right-6 z-[9999] max-w-sm w-full bg-slate-900 border border-emerald-500/30 text-white rounded-2xl shadow-2xl p-4 flex items-start gap-3 transform translate-y-[-20px] opacity-0 transition-all duration-300 pointer-events-auto";
+  
+  if (type === "error") {
+    toast.className = "fixed top-6 right-6 z-[9999] max-w-sm w-full bg-slate-900 border border-rose-500/30 text-white rounded-2xl shadow-2xl p-4 flex items-start gap-3 transform translate-y-[-20px] opacity-0 transition-all duration-300 pointer-events-auto";
+  }
+
+  const iconHtml = type === "success" 
+    ? '<div class="bg-emerald-500/20 text-emerald-400 p-2.5 rounded-xl"><i class="fa-solid fa-circle-check text-lg animate-bounce"></i></div>'
+    : '<div class="bg-rose-500/20 text-rose-400 p-2.5 rounded-xl"><i class="fa-solid fa-circle-exclamation text-lg animate-pulse"></i></div>';
+
+  toast.innerHTML = \`
+    \${iconHtml}
+    <div class="flex-1 space-y-1">
+      <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400">\${type === "success" ? "Fampandrenesana" : "Olana"}</h4>
+      <p class="text-xs text-slate-200 leading-normal">\${message}</p>
+    </div>
+    <button type="button" class="text-slate-500 hover:text-slate-300 text-xs font-bold px-1.5 py-0.5 rounded-lg hover:bg-slate-800 transition" onclick="this.parentElement.remove()">✕</button>
+  \`;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.remove("translate-y-[-20px]", "opacity-0");
+    toast.classList.add("translate-y-0", "opacity-100");
+  }, 10);
+
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.classList.remove("translate-y-0", "opacity-100");
+      toast.classList.add("translate-y-[-20px]", "opacity-0");
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.remove();
+        }
+      }, 300);
+    }
+  }, 4500);
 }
 
 // Global reference to store dynamic CMS data
@@ -2126,14 +2281,63 @@ document.addEventListener("DOMContentLoaded", function () {
     logoFileEl.addEventListener("change", async function(e) {
       const file = e.target.files[0];
       if (file) {
+        const prev = document.getElementById("logo-preview-img");
+        const pathDisplay = document.getElementById("logo-preview-path");
+        const previewContainer = document.getElementById("logo-preview");
+        if (prev) {
+          prev.style.opacity = "0.4";
+        }
+        showFloatingToast("Eo am-panodinana sy famatrarana ny sary... (Compression en cours...)", "success");
         const b64 = await fileToBase64(file);
         document.getElementById("cms-siteLogo").value = b64;
         cmsData["siteLogo"] = b64;
-        const prev = document.getElementById("logo-preview-img");
         if (prev) {
           prev.src = b64;
-          document.getElementById("logo-preview").classList.remove("hidden");
+          prev.style.opacity = "1";
         }
+        if (pathDisplay) {
+          pathDisplay.textContent = "Sary avy amin'ny PC/Android (Base64)";
+        }
+        if (previewContainer) {
+          previewContainer.classList.remove("hidden");
+        }
+        showFloatingToast("Tafiditra soa aman-tsara ny sarin'ny logo! (Logo chargé)", "success");
+      }
+    });
+  }
+
+  // Live URL input for Logo
+  const logoUrlInput = document.getElementById("cms-siteLogo");
+  if (logoUrlInput) {
+    logoUrlInput.addEventListener("input", function() {
+      const val = this.value.trim();
+      cmsData["siteLogo"] = val;
+      const prev = document.getElementById("logo-preview-img");
+      const pathDisplay = document.getElementById("logo-preview-path");
+      const previewContainer = document.getElementById("logo-preview");
+      if (val) {
+        if (prev) prev.src = val;
+        if (pathDisplay) pathDisplay.textContent = val.startsWith("data:") ? "Sary avy amin'ny PC/Android (Base64)" : val;
+        if (previewContainer) previewContainer.classList.remove("hidden");
+      } else {
+        if (previewContainer) previewContainer.classList.add("hidden");
+      }
+    });
+  }
+
+  // Clear/Delete Logo button
+  const clearLogoBtn = document.getElementById("cms-clearLogoBtn");
+  if (clearLogoBtn) {
+    clearLogoBtn.addEventListener("click", () => {
+      if (confirm("Fafana ny sarin'ny logo? (Supprimer le logo ?)")) {
+        cmsData["siteLogo"] = "";
+        const input = document.getElementById("cms-siteLogo");
+        if (input) input.value = "";
+        const prev = document.getElementById("logo-preview-img");
+        if (prev) prev.src = "";
+        const previewContainer = document.getElementById("logo-preview");
+        if (previewContainer) previewContainer.classList.add("hidden");
+        showFloatingToast("Voafafa ny sarin'ny logo! (Logo effacé)", "success");
       }
     });
   }
@@ -2144,9 +2348,63 @@ document.addEventListener("DOMContentLoaded", function () {
     heroImgFileEl.addEventListener("change", async function(e) {
       const file = e.target.files[0];
       if (file) {
+        const prev = document.getElementById("hero-preview-img");
+        const pathDisplay = document.getElementById("hero-preview-path");
+        const previewContainer = document.getElementById("hero-preview");
+        if (prev) {
+          prev.style.opacity = "0.4";
+        }
+        showFloatingToast("Eo am-panodinana sy famatrarana ny sary... (Compression en cours...)", "success");
         const b64 = await fileToBase64(file);
         document.getElementById("cms-heroImage").value = b64;
         cmsData["heroImage"] = b64;
+        if (prev) {
+          prev.src = b64;
+          prev.style.opacity = "1";
+        }
+        if (pathDisplay) {
+          pathDisplay.textContent = "Sary avy amin'ny PC/Android (Base64)";
+        }
+        if (previewContainer) {
+          previewContainer.classList.remove("hidden");
+        }
+        showFloatingToast("Tafiditra soa aman-tsara ny sarin'ny Accueil! (Image hero chargée)", "success");
+      }
+    });
+  }
+
+  // Live URL input for Hero Image
+  const heroUrlInput = document.getElementById("cms-heroImage");
+  if (heroUrlInput) {
+    heroUrlInput.addEventListener("input", function() {
+      const val = this.value.trim();
+      cmsData["heroImage"] = val;
+      const prev = document.getElementById("hero-preview-img");
+      const pathDisplay = document.getElementById("hero-preview-path");
+      const previewContainer = document.getElementById("hero-preview");
+      if (val) {
+        if (prev) prev.src = val;
+        if (pathDisplay) pathDisplay.textContent = val.startsWith("data:") ? "Sary avy amin'ny PC/Android (Base64)" : val;
+        if (previewContainer) previewContainer.classList.remove("hidden");
+      } else {
+        if (previewContainer) previewContainer.classList.add("hidden");
+      }
+    });
+  }
+
+  // Clear/Delete Hero button
+  const clearHeroBtn = document.getElementById("cms-clearHeroBtn");
+  if (clearHeroBtn) {
+    clearHeroBtn.addEventListener("click", () => {
+      if (confirm("Fafana ny sarin'ny Accueil? (Supprimer l'image hero ?)")) {
+        cmsData["heroImage"] = "";
+        const input = document.getElementById("cms-heroImage");
+        if (input) input.value = "";
+        const prev = document.getElementById("hero-preview-img");
+        if (prev) prev.src = "";
+        const previewContainer = document.getElementById("hero-preview");
+        if (previewContainer) previewContainer.classList.add("hidden");
+        showFloatingToast("Voafafa ny sarin'ny Accueil! (Image hero effacée)", "success");
       }
     });
   }
@@ -2224,15 +2482,34 @@ document.addEventListener("DOMContentLoaded", function () {
     if (cmsData.siteLogo && document.getElementById("cms-siteLogo")) {
       document.getElementById("cms-siteLogo").value = cmsData.siteLogo;
       const prev = document.getElementById("logo-preview-img");
+      const pathDisplay = document.getElementById("logo-preview-path");
       if (prev) {
         prev.src = cmsData.siteLogo;
-        document.getElementById("logo-preview").classList.remove("hidden");
+        if (pathDisplay) pathDisplay.textContent = cmsData.siteLogo.startsWith("data:") ? "Sary avy amin'ny PC/Android (Base64)" : cmsData.siteLogo;
+        const container = document.getElementById("logo-preview");
+        if (container) container.classList.remove("hidden");
       }
+    } else {
+      const container = document.getElementById("logo-preview");
+      if (container) container.classList.add("hidden");
     }
     if (cmsData.heroTitle && document.getElementById("cms-heroTitle")) document.getElementById("cms-heroTitle").value = cmsData.heroTitle;
     if (cmsData.heroSubtitle && document.getElementById("cms-heroSubtitle")) document.getElementById("cms-heroSubtitle").value = cmsData.heroSubtitle;
     if (cmsData.heroCta && document.getElementById("cms-heroCta")) document.getElementById("cms-heroCta").value = cmsData.heroCta;
-    if (cmsData.heroImage && document.getElementById("cms-heroImage")) document.getElementById("cms-heroImage").value = cmsData.heroImage;
+    if (cmsData.heroImage && document.getElementById("cms-heroImage")) {
+      document.getElementById("cms-heroImage").value = cmsData.heroImage;
+      const prev = document.getElementById("hero-preview-img");
+      const pathDisplay = document.getElementById("hero-preview-path");
+      if (prev) {
+        prev.src = cmsData.heroImage;
+        if (pathDisplay) pathDisplay.textContent = cmsData.heroImage.startsWith("data:") ? "Sary avy amin'ny PC/Android (Base64)" : cmsData.heroImage;
+        const container = document.getElementById("hero-preview");
+        if (container) container.classList.remove("hidden");
+      }
+    } else {
+      const container = document.getElementById("hero-preview");
+      if (container) container.classList.add("hidden");
+    }
     if (cmsData.servicesTitle && document.getElementById("cms-servicesTitle")) document.getElementById("cms-servicesTitle").value = cmsData.servicesTitle;
     if (cmsData.servicesSubtitle && document.getElementById("cms-servicesSubtitle")) document.getElementById("cms-servicesSubtitle").value = cmsData.servicesSubtitle;
     if (cmsData.metaTitle && document.getElementById("cms-metaTitle")) {
@@ -2277,6 +2554,71 @@ document.addEventListener("DOMContentLoaded", function () {
           copySiteUrlBtn.classList.remove("text-emerald-400");
           copySiteUrlBtn.classList.add("text-amber-400");
         }, 2500);
+      });
+    }
+
+    // Save Google Verification Tag Button
+    const saveGoogleBtn = document.getElementById("save-google-verification-btn");
+    if (saveGoogleBtn) {
+      saveGoogleBtn.addEventListener("click", async () => {
+        const input = document.getElementById("cms-googleVerification");
+        if (!input) return;
+        const val = input.value.trim();
+        
+        saveGoogleBtn.disabled = true;
+        const originalHtml = saveGoogleBtn.innerHTML;
+        saveGoogleBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Eo am-pampidirana...';
+        
+        cmsData.googleVerification = val;
+        
+        // Save to localStorage
+        localStorage.setItem("devwebia_site_cms", JSON.stringify(cmsData));
+        
+        // Save to Firestore
+        let success = true;
+        if (window.db) {
+          try {
+            await window.db.collection("app_data").doc("site_content").set(cmsData, { merge: true });
+          } catch (err) {
+            console.warn("Google Verification save error:", err);
+            success = false;
+          }
+        }
+        
+        setTimeout(() => {
+          saveGoogleBtn.disabled = false;
+          if (success) {
+            saveGoogleBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tafiditra soa aman-tsara !';
+            saveGoogleBtn.classList.remove("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
+            saveGoogleBtn.classList.add("bg-emerald-600", "text-white");
+            showFloatingToast("Tafiditra sy voatahiry soa aman-tsara ny balise Google-nao!", "success");
+            
+            setTimeout(() => {
+              saveGoogleBtn.innerHTML = originalHtml;
+              saveGoogleBtn.classList.remove("bg-emerald-600", "text-white");
+              saveGoogleBtn.classList.add("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
+            }, 3000);
+          } else {
+            saveGoogleBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Nisy olana!';
+            saveGoogleBtn.classList.remove("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
+            saveGoogleBtn.classList.add("bg-rose-600", "text-white");
+            showFloatingToast("Nisy olana teo am-pitahirizana ny balise.", "error");
+            
+            setTimeout(() => {
+              saveGoogleBtn.innerHTML = originalHtml;
+              saveGoogleBtn.classList.remove("bg-rose-600", "text-white");
+              saveGoogleBtn.classList.add("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
+            }, 3000);
+          }
+        }, 1000);
+      });
+    }
+
+    // View Site Verify Button
+    const viewSiteVerifyBtn = document.getElementById("view-site-verify-btn");
+    if (viewSiteVerifyBtn) {
+      viewSiteVerifyBtn.addEventListener("click", () => {
+        window.open(window.location.origin, "_blank");
       });
     }
 
@@ -2425,13 +2767,14 @@ document.addEventListener("DOMContentLoaded", function () {
             deleteBtn.type = "button";
             deleteBtn.className = "absolute top-2 right-2 w-8 h-8 rounded-full bg-red-600/80 hover:bg-red-600 text-white flex items-center justify-center text-xs shadow-md transition";
             deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
-            deleteBtn.title = "Supprimer / Remplacer par un espace vide";
+            deleteBtn.title = "Fafana ity sary ity (Effacer / Supprimer)";
             deleteBtn.addEventListener("click", () => {
-              if (confirm("Supprimer l'image ?")) {
+              if (confirm("Tena tianao hofafana tokoa ve ity sary ity? (Supprimer l'image ?)")) {
                 cmsData[item.key] = "";
                 imgPreview.src = "";
                 const inputUrl = document.getElementById("dyn-img-url-" + item.key);
                 if (inputUrl) inputUrl.value = "";
+                showFloatingToast("Voafafa soa aman-tsara ilay sary! (Image effacée)", "success");
               }
             });
             previewBox.appendChild(deleteBtn);
@@ -2451,11 +2794,15 @@ document.addEventListener("DOMContentLoaded", function () {
             fileInput.addEventListener("change", async (e) => {
               const file = e.target.files[0];
               if (file) {
+                imgPreview.style.opacity = "0.4";
+                showFloatingToast("Eo am-panodinana sy famatrarana ity sary ity... (Compression...)", "success");
                 const b64 = await fileToBase64(file);
                 cmsData[item.key] = b64;
                 imgPreview.src = b64;
+                imgPreview.style.opacity = "1";
                 const inputUrl = document.getElementById("dyn-img-url-" + item.key);
                 if (inputUrl) inputUrl.value = b64;
+                showFloatingToast("Tafiditra ny sary vaovao! (Nouvelle image chargée)", "success");
               }
             });
             fileRow.appendChild(fileInput);
@@ -2469,12 +2816,12 @@ document.addEventListener("DOMContentLoaded", function () {
             urlInput.type = "text";
             urlInput.id = "dyn-img-url-" + item.key;
             urlInput.placeholder = "https://images.unsplash.com/...";
-            urlInput.value = item.currentVal && !item.currentVal.startsWith("data:") ? item.currentVal : "";
+            urlInput.value = item.currentVal || "";
             urlInput.className = "w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500";
             
             urlInput.addEventListener("input", () => {
               cmsData[item.key] = urlInput.value;
-              imgPreview.src = urlInput.value || "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400";
+              imgPreview.src = urlInput.value || "";
             });
             
             urlRow.appendChild(urlInput);
@@ -2493,24 +2840,35 @@ document.addEventListener("DOMContentLoaded", function () {
   if (cmsForm) {
     cmsForm.addEventListener("submit", async function (e) {
       e.preventDefault();
+      
+      const submitBtn = document.getElementById("cms-submit-btn");
+      const originalBtnHtml = submitBtn ? submitBtn.innerHTML : "";
+      
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xl"></i> Handrakitra sy handefa ny fanovana... (Enregistrement...)';
+        submitBtn.classList.remove("bg-emerald-500", "hover:bg-emerald-600", "text-slate-950");
+        submitBtn.classList.add("bg-indigo-600", "text-white");
+      }
+
       const updatedData = {
         ...cmsData,
-        siteTitle: document.getElementById("cms-siteTitle").value,
-        siteSlogan: document.getElementById("cms-siteSlogan").value,
-        siteLogo: document.getElementById("cms-siteLogo").value,
-        heroTitle: document.getElementById("cms-heroTitle").value,
-        heroSubtitle: document.getElementById("cms-heroSubtitle").value,
-        heroCta: document.getElementById("cms-heroCta").value,
-        heroImage: document.getElementById("cms-heroImage").value,
-        servicesTitle: document.getElementById("cms-servicesTitle").value,
-        servicesSubtitle: document.getElementById("cms-servicesSubtitle").value,
-        metaTitle: document.getElementById("cms-metaTitle").value,
-        metaKeywords: document.getElementById("cms-metaKeywords").value,
-        metaDesc: document.getElementById("cms-metaDesc").value,
-        pwaName: document.getElementById("cms-pwaName").value,
-        pwaThemeColor: document.getElementById("cms-pwaThemeColor").value,
-        whatsapp: document.getElementById("cms-whatsapp").value,
-        footerText: document.getElementById("cms-footerText").value,
+        siteTitle: document.getElementById("cms-siteTitle")?.value || "",
+        siteSlogan: document.getElementById("cms-siteSlogan")?.value || "",
+        siteLogo: document.getElementById("cms-siteLogo")?.value || "",
+        heroTitle: document.getElementById("cms-heroTitle")?.value || "",
+        heroSubtitle: document.getElementById("cms-heroSubtitle")?.value || "",
+        heroCta: document.getElementById("cms-heroCta")?.value || "",
+        heroImage: document.getElementById("cms-heroImage")?.value || "",
+        servicesTitle: document.getElementById("cms-servicesTitle")?.value || "",
+        servicesSubtitle: document.getElementById("cms-servicesSubtitle")?.value || "",
+        metaTitle: document.getElementById("cms-metaTitle")?.value || "",
+        metaKeywords: document.getElementById("cms-metaKeywords")?.value || "",
+        metaDesc: document.getElementById("cms-metaDesc")?.value || "",
+        pwaName: document.getElementById("cms-pwaName")?.value || "",
+        pwaThemeColor: document.getElementById("cms-pwaThemeColor")?.value || "",
+        whatsapp: document.getElementById("cms-whatsapp")?.value || "",
+        footerText: document.getElementById("cms-footerText")?.value || "",
         googleVerification: document.getElementById("cms-googleVerification") ? document.getElementById("cms-googleVerification").value : "",
         updatedAt: new Date().toISOString()
       };
@@ -2521,27 +2879,67 @@ document.addEventListener("DOMContentLoaded", function () {
         updatedData[key] = input.value;
       });
 
+      // Also ensure any dynamic image URLs are up-to-date
+      document.querySelectorAll("[id^='dyn-img-url-']").forEach(input => {
+        const key = input.id.replace("dyn-img-url-", "");
+        updatedData[key] = input.value;
+      });
+
       // Save to localStorage
       localStorage.setItem("devwebia_site_cms", JSON.stringify(updatedData));
 
       // Save PIN if updated
-      const newPin = document.getElementById("cms-newPin").value.trim();
+      const newPin = document.getElementById("cms-newPin")?.value.trim() || "";
       if (newPin.length >= 4) {
         const newHash = await hashPin(newPin);
         localStorage.setItem("devwebia_admin_pin_hash", newHash);
         document.getElementById("cms-newPin").value = "";
       }
 
+      let saveSuccess = true;
+      let errorMessage = "";
+
       // Save to Firestore
       if (window.db) {
         try {
           await window.db.collection("app_data").doc("site_content").set(updatedData, { merge: true });
         } catch (err) {
-          console.warn("Firestore save notice:", err);
+          console.warn("Firestore save failure:", err);
+          saveSuccess = false;
+          errorMessage = err.message || "Impossible de sauvegarder sur Firestore.";
         }
       }
 
-      if (statusToast) {
+      // Slight delay so the user can see progress animation
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Restore button
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        if (saveSuccess) {
+          submitBtn.innerHTML = '<i class="fa-solid fa-circle-check text-white animate-bounce"></i> Voatahiry soa aman-tsara! (Enregistré!)';
+          submitBtn.classList.remove("bg-indigo-600", "text-white");
+          submitBtn.classList.add("bg-emerald-600", "text-white");
+          
+          showFloatingToast("Voatahiry sy nalefa soa aman-tsara ny fanovana nataonao! (Modifications enregistrées et publiées)", "success");
+        } else {
+          submitBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-white animate-pulse"></i> Nisy olana! (Erreur)';
+          submitBtn.classList.remove("bg-indigo-600", "text-white");
+          submitBtn.classList.add("bg-rose-600", "text-white");
+          
+          showFloatingToast("Nisy olana teo am-pitahirizana: " + errorMessage, "error");
+        }
+        
+        setTimeout(() => {
+          if (submitBtn) {
+            submitBtn.innerHTML = originalBtnHtml;
+            submitBtn.classList.remove("bg-emerald-600", "bg-rose-600", "text-white");
+            submitBtn.classList.add("bg-emerald-500", "text-slate-950", "hover:bg-emerald-600");
+          }
+        }, 3000);
+      }
+
+      if (saveSuccess && statusToast) {
         statusToast.classList.remove("hidden");
         setTimeout(() => statusToast.classList.add("hidden"), 4000);
       }
