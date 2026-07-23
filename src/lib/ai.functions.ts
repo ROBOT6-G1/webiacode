@@ -193,11 +193,15 @@ function buildSystemPrompt(
      - Open Graph complet : \`og:title\`, \`og:description\`, \`og:image\`, \`og:url\`, \`og:type="website"\`.
      - Twitter Cards : \`twitter:card\`, \`twitter:title\`, \`twitter:description\`, \`twitter:image\`.
      - Données structurées JSON-LD (Schema.org / Organization / LocalBusiness / WebSite) pour apparition directe dans les résultats Google.
+     - Une balise dynamique pour la vérification Google Search Console : \`<meta name="google-site-verification" content="" id="meta-google-site-verification">\`.
   2. FICHIERS SITEMAP ET ROBOTS :
      - Génère obligatoirement \`sitemap.xml\` avec les pages et \`lastmod\`.
      - Génère obligatoirement \`robots.txt\` autorisant Googlebot / Bingbot et pointant vers le \`sitemap.xml\`.
   3. PANNEAU ADMIN \`admin.html\` & \`admin.js\` :
-     - Section "🔍 AUTO-SEO & Indexation Google Directe" avec le bouton "🚀 Lancer la demande d'indexation Google (Google Ping)" en premier plan.`;
+     - Section "🔍 AUTO-SEO & Indexation Google Directe" avec le bouton "🚀 Lancer la demande d'indexation Google (Google Ping)" en premier plan.
+     - OBLIGATOIRE : Ajoute un champ pour coller la balise meta de vérification Google Console (\`<meta name="google-site-verification" ...>\`) afin de mettre à jour dynamiquement \`index.html\`.
+     - OBLIGATOIRE : Ajoute un bouton contenant un lien direct (avec \`target="_blank"\`) vers Google Search Console (https://search.google.com/search-console) indiquant "Ouvrir Google Search Console".
+     - OBLIGATOIRE : Affiche le vrai lien de production (Lien original du site) pour que l'utilisateur le copie, en précisant que s'il est en mode aperçu, il doit copier son URL finale de domaine.`;
 
   const contentPurityBlock = `\nINTERDICTION STRICTE DE POLLUTION DE CONTENU (CRITIQUE) :
 - Ne MÊLE JAMAIS les questions/réponses de clarification, les prompts, ni l'historique de la discussion dans les textes visibles du site web.
@@ -238,7 +242,7 @@ function buildSystemPrompt(
   const badgeBlock =
     userPlan === "free"
       ? `\nBADGE DEVWEBIA — OBLIGATOIRE (plan gratuit) :
-- Ajoute en bas à gauche du site public le badge interactif avec l'id "devwebia-badge". Il doit être un lien vers "https://devwebia.mg" avec une icône de baguette magique, et inclure un petit bouton 'X' à la fin pour le masquer au clic (onclick="document.getElementById('devwebia-badge').style.display='none'"). Exemple : <div id="devwebia-badge" class="fixed bottom-4 left-4 z-50 bg-slate-900/95 text-white text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-2xl border border-slate-700/50 backdrop-blur-md flex items-center gap-3 transition-all duration-300"><a href="https://devwebia.mg" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Fait avec DEVWEBIA</a><button onclick="document.getElementById('devwebia-badge').style.display='none'" class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-full w-5 h-5 flex items-center justify-center transition" title="Fermer"><i class="fa-solid fa-times"></i></button></div>`
+- Ajoute en bas à gauche du site public le badge interactif avec l'id "devwebia-badge". Il doit être un lien vers "https://www.facebook.com/devwebia" avec une icône de baguette magique, et inclure un petit bouton 'X' à la fin pour le masquer au clic (onclick="document.getElementById('devwebia-badge').style.display='none'"). Exemple : <div id="devwebia-badge" class="fixed bottom-4 left-4 z-50 bg-slate-900/95 text-white text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-2xl border border-slate-700/50 backdrop-blur-md flex items-center gap-3 transition-all duration-300"><a href="https://www.facebook.com/devwebia" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Fait avec DEVWEBIA</a><button onclick="document.getElementById('devwebia-badge').style.display='none'" class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-full w-5 h-5 flex items-center justify-center transition" title="Fermer"><i class="fa-solid fa-times"></i></button></div>`
       : `\nBADGE DEVWEBIA — plan Pro : ne pas ajouter de badge.`;
 
   return `Tu es DEVWEBIA, développeur front-end SENIOR et DESIGNER UI. Tu génères des sites web modernes avec Firebase et leur interface d'administration.
@@ -705,7 +709,7 @@ if (typeof firebase !== 'undefined') {
   const badgeHtml =
     userPlan === "free"
       ? `<div id="devwebia-badge" class="fixed bottom-4 left-4 z-50 bg-slate-900/95 text-white text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-2xl border border-slate-700/50 backdrop-blur-md flex items-center gap-3 transition-all duration-300">
-           <a href="https://devwebia.mg" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5">
+           <a href="https://www.facebook.com/devwebia" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5">
              <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Fait avec DEVWEBIA
            </a>
            <button onclick="document.getElementById('devwebia-badge').style.display='none'" class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-full w-5 h-5 flex items-center justify-center transition" title="Fermer">

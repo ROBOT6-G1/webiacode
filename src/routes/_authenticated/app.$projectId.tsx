@@ -190,7 +190,20 @@ function ProjectView() {
       }
       if (!isMounted.current) return;
       setStreamFile(null);
-      if (entries.length > 0) setUpToDate(false);
+      if (entries.length > 0) {
+        setUpToDate(false);
+        // Déploiement automatique en arrière-plan si déjà connecté à GitHub/Vercel
+        if (project.data?.github_repo || project.data?.vercel_project_id) {
+          publishSite({ data: { projectId }, headers }).then((res) => {
+            if (isMounted.current) {
+              setUpToDate(true);
+              toast.success("Mise à jour déployée automatiquement !");
+            }
+          }).catch((err) => {
+            console.warn("Auto-deploy skipped or failed", err);
+          });
+        }
+      }
       await queryClient.invalidateQueries();
     } catch (err) {
       if (!isMounted.current) return;
