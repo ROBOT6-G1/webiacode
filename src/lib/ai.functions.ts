@@ -3,6 +3,7 @@ import { requireFirebaseAuth } from "@/integrations/firebase/auth-middleware";
 import { adminDb } from "@/integrations/firebase/admin";
 import { firebaseConfig } from "@/integrations/firebase/config";
 import { z } from "zod";
+import { jsonrepair } from "jsonrepair";
 
 const siteTypeEnum = z.enum(["vitrine", "portfolio", "ecommerce", "hotel", "school", "erp"]);
 const languageEnum = z.enum(["fr", "mg", "en", "zh", "it"]);
@@ -434,15 +435,29 @@ function extractJson(text: string): GeneratedSite | null {
     }
   };
 
+  // 1. Direct parse of raw
   let res = tryParse(raw);
   if (res) return res;
 
-  // Try repairing raw
-  const repairedRaw = repairJsonString(raw);
-  res = tryParse(repairedRaw);
-  if (res) return res;
+  // 2. Try jsonrepair on raw
+  try {
+    const repaired = jsonrepair(raw);
+    res = tryParse(repaired);
+    if (res) return res;
+  } catch (err) {
+    console.warn("jsonrepair of raw failed:", err);
+  }
 
-  // Try finding first { and last }
+  // 3. Fallback repairJsonString on raw
+  try {
+    const repairedRaw = repairJsonString(raw);
+    res = tryParse(repairedRaw);
+    if (res) return res;
+  } catch (err) {
+    console.warn("repairJsonString of raw failed:", err);
+  }
+
+  // 4. Try finding first { and last }
   const startIdx = text.indexOf("{");
   const endIdx = text.lastIndexOf("}");
   if (startIdx !== -1 && endIdx > startIdx) {
@@ -450,10 +465,23 @@ function extractJson(text: string): GeneratedSite | null {
     res = tryParse(jsonSub);
     if (res) return res;
 
-    // Try repairing jsonSub
-    const repairedSub = repairJsonString(jsonSub);
-    res = tryParse(repairedSub);
-    if (res) return res;
+    // Try jsonrepair on jsonSub
+    try {
+      const repaired = jsonrepair(jsonSub);
+      res = tryParse(repaired);
+      if (res) return res;
+    } catch (err) {
+      console.warn("jsonrepair of jsonSub failed:", err);
+    }
+
+    // Try repairJsonString on jsonSub
+    try {
+      const repairedSub = repairJsonString(jsonSub);
+      res = tryParse(repairedSub);
+      if (res) return res;
+    } catch (err) {
+      console.warn("repairJsonString of jsonSub failed:", err);
+    }
   }
 
   return null;
