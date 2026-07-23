@@ -21,7 +21,7 @@ export const adminDb = {
     return snap.exists() ? snap.data() : null;
   },
 
-  async updateProfile(userId: string, data: Record<string, any>) {
+  async updateProfile(userId: string, data: Record<string, unknown>) {
     const ref = doc(db, "profiles", userId);
     await setDoc(ref, { id: userId, ...data }, { merge: true });
   },
@@ -33,7 +33,7 @@ export const adminDb = {
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;
   },
 
-  async updateProject(projectId: string, data: Record<string, any>) {
+  async updateProject(projectId: string, data: Record<string, unknown>) {
     if (!projectId) return;
     const ref = doc(db, "projects", projectId);
     await setDoc(ref, { id: projectId, ...data }, { merge: true });
@@ -53,7 +53,7 @@ export const adminDb = {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   },
 
-  async updateAdminKey(keyId: string, data: Record<string, any>) {
+  async updateAdminKey(keyId: string, data: Record<string, unknown>) {
     if (!keyId) return;
     await setDoc(doc(db, "admin_gemini_keys", keyId), data, { merge: true });
   },
@@ -65,13 +65,13 @@ export const adminDb = {
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;
   },
 
-  async updatePayment(paymentId: string, data: Record<string, any>) {
+  async updatePayment(paymentId: string, data: Record<string, unknown>) {
     if (!paymentId) return;
     await setDoc(doc(db, "payments", paymentId), data, { merge: true });
   },
 
   // Messages
-  async addMessage(msg: Record<string, any>) {
+  async addMessage(msg: Record<string, unknown>) {
     const docRef = await addDoc(collection(db, "messages"), {
       ...msg,
       created_at: new Date().toISOString(),

@@ -242,6 +242,14 @@ function buildSystemPrompt(
 
   return `Tu es DEVWEBIA, développeur front-end SENIOR et DESIGNER UI. Tu génères des sites web modernes avec Firebase et leur interface d'administration.
 
+RÈGLE D'OR ABSOLUE (EXIGENCE CRITIQUE DU CLIENT) :
+Tu DOIS impérativement implémenter l'intégralité des 10 sections obligatoires répertoriées ci-dessous pour le type de site choisi (voir la section "TYPE DE SITE" ci-dessous). 
+- Ne saute AUCUNE des 10 sections obligatoires.
+- Ne combine AUCUNE section pour raccourcir le code.
+- Chacune des 10 sections doit comporter des textes riches, élégants, attrayants et complets (pas de placeholders de type "Lorem Ipsum" ou "Lorem...", pas de textes de remplissage non rédigés).
+- Chaque section doit comporter des attributs d'édition de données (ex: data-cms="...") afin de pouvoir être intégralement modifiée via le panneau d'administration de manière fluide.
+- Tout site généré doit impérativement avoir exactement les 10 sections énumérées.
+
 Réponds TOUJOURS en JSON strict entouré de <JSON>…</JSON> :
 
 <JSON>
@@ -266,6 +274,122 @@ ${pwaBlock}
 ${seoBlock}
 ${contentPurityBlock}
 ${userFirebaseSnippet}`;
+}
+
+function repairJsonString(str: string): string {
+  let insideString = false;
+  let escaped = false;
+  let result = "";
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+
+    if (!insideString) {
+      if (char === "/" && str[i + 1] === "*") {
+        i += 2;
+        while (i < str.length && !(str[i] === "*" && str[i + 1] === "/")) {
+          i++;
+        }
+        i++;
+        continue;
+      }
+      if (char === "/" && str[i + 1] === "/") {
+        i += 2;
+        while (i < str.length && str[i] !== "\n") {
+          i++;
+        }
+        continue;
+      }
+    }
+
+    if (insideString) {
+      if (escaped) {
+        result += char;
+        escaped = false;
+      } else if (char === "\\") {
+        result += char;
+        escaped = true;
+      } else if (char === '"') {
+        let isClosing = false;
+        let j = i + 1;
+        while (j < str.length && /\s/.test(str[j])) {
+          j++;
+        }
+        if (j < str.length) {
+          const nextChar = str[j];
+          if (
+            nextChar === ":" ||
+            nextChar === "," ||
+            nextChar === "}" ||
+            nextChar === "]" ||
+            nextChar === ""
+          ) {
+            isClosing = true;
+          }
+        } else {
+          isClosing = true;
+        }
+
+        if (isClosing) {
+          insideString = false;
+          result += char;
+        } else {
+          result += '\\"';
+        }
+      } else if (char === "\n") {
+        result += "\\n";
+      } else if (char === "\r") {
+        result += "\\r";
+      } else if (char === "\t") {
+        result += "\\t";
+      } else {
+        result += char;
+      }
+    } else {
+      if (char === '"') {
+        insideString = true;
+        result += char;
+      } else {
+        result += char;
+      }
+    }
+  }
+
+  // Remove trailing commas
+  result = result.replace(/,\s*([}\]])/g, "$1");
+
+  // Balance brackets/braces
+  let openBraces = 0;
+  let openBrackets = 0;
+  let insideStr = false;
+  let esc = false;
+
+  for (let i = 0; i < result.length; i++) {
+    const char = result[i];
+    if (esc) {
+      esc = false;
+    } else if (char === "\\") {
+      esc = true;
+    } else if (char === '"') {
+      insideStr = !insideStr;
+    } else if (!insideStr) {
+      if (char === "{") openBraces++;
+      else if (char === "}") openBraces = Math.max(0, openBraces - 1);
+      else if (char === "[") openBrackets++;
+      else if (char === "]") openBrackets = Math.max(0, openBrackets - 1);
+    }
+  }
+
+  while (openBrackets > 0) {
+    result += "]";
+    openBrackets--;
+  }
+  while (openBraces > 0) {
+    result += "}";
+    openBraces--;
+  }
+
+  return result;
 }
 
 function extractJson(text: string): GeneratedSite | null {
@@ -313,12 +437,22 @@ function extractJson(text: string): GeneratedSite | null {
   let res = tryParse(raw);
   if (res) return res;
 
+  // Try repairing raw
+  const repairedRaw = repairJsonString(raw);
+  res = tryParse(repairedRaw);
+  if (res) return res;
+
   // Try finding first { and last }
   const startIdx = text.indexOf("{");
   const endIdx = text.lastIndexOf("}");
   if (startIdx !== -1 && endIdx > startIdx) {
     const jsonSub = text.substring(startIdx, endIdx + 1);
     res = tryParse(jsonSub);
+    if (res) return res;
+
+    // Try repairing jsonSub
+    const repairedSub = repairJsonString(jsonSub);
+    res = tryParse(repairedSub);
     if (res) return res;
   }
 
@@ -696,27 +830,41 @@ if (typeof firebase !== 'undefined') {
   const scriptJs = `// Logique interactive & Chargeur CMS Dynamique DEVWEBIA
 function applyCmsData(data) {
   if (!data) return;
+  
+  // Dynamic updates for any data-cms text element
+  Object.keys(data).forEach(key => {
+    const val = data[key];
+    if (val === undefined || val === null) return;
+
+    // 1. Update text elements
+    document.querySelectorAll('[data-cms="' + key + '"]').forEach(el => {
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+        el.value = val;
+      } else {
+        el.textContent = val;
+      }
+    });
+
+    // 2. Update image elements
+    document.querySelectorAll('[data-cms-img="' + key + '"]').forEach(el => {
+      if (el.tagName === "IMG") {
+        el.src = val;
+        el.classList.remove("hidden");
+      } else {
+        el.style.backgroundImage = 'url("' + val + '")';
+      }
+    });
+  });
+
+  // Structural/Legacy fallback updates
   if (data.siteTitle) {
-    document.querySelectorAll('[data-cms="siteTitle"]').forEach(el => el.textContent = data.siteTitle);
     document.title = data.siteTitle;
-  }
-  if (data.siteSlogan) {
-    document.querySelectorAll('[data-cms="siteSlogan"]').forEach(el => el.textContent = data.siteSlogan);
   }
   if (data.siteLogo) {
     const container = document.getElementById("logo-container");
     if (container) {
       container.innerHTML = '<img src="' + data.siteLogo + '" class="w-full h-full object-cover rounded-xl">';
     }
-  }
-  if (data.heroTitle) {
-    document.querySelectorAll('[data-cms="heroTitle"]').forEach(el => el.textContent = data.heroTitle);
-  }
-  if (data.heroSubtitle) {
-    document.querySelectorAll('[data-cms="heroSubtitle"]').forEach(el => el.textContent = data.heroSubtitle);
-  }
-  if (data.heroCta) {
-    document.querySelectorAll('[data-cms="heroCta"]').forEach(el => el.textContent = data.heroCta);
   }
   if (data.heroImage) {
     const imgEl = document.getElementById("hero-custom-img");
@@ -725,19 +873,10 @@ function applyCmsData(data) {
       imgEl.classList.remove("hidden");
     }
   }
-  if (data.servicesTitle) {
-    document.querySelectorAll('[data-cms="servicesTitle"]').forEach(el => el.textContent = data.servicesTitle);
-  }
-  if (data.servicesSubtitle) {
-    document.querySelectorAll('[data-cms="servicesSubtitle"]').forEach(el => el.textContent = data.servicesSubtitle);
-  }
   if (data.whatsapp) {
     const cleanWa = data.whatsapp.replace(/[^0-9]/g, "");
     document.querySelectorAll('[data-cms-wa-link]').forEach(el => el.href = "https://wa.me/" + cleanWa);
     document.querySelectorAll('[data-cms="whatsapp"]').forEach(el => el.textContent = data.whatsapp);
-  }
-  if (data.footerText) {
-    document.querySelectorAll('[data-cms="footerText"]').forEach(el => el.textContent = data.footerText);
   }
 }
 
@@ -779,358 +918,808 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 `;
 
-  const fallbackQuestionsMap: Record<string, Array<{ q: string; options: string[] }>> = {
-    mg: [
-      {
-        q: "1. Inona no anarana marina sy ofisialin'ny marika na ny enterprise anao?",
-        options: ["Anarana manokana", "Mbola ho karohina"],
-      },
-      {
-        q: "2. Inona no slogan na phrase d'accroche lehibe indrindra amin'ny site?",
-        options: ["Slogan matihanina", "Mila hevitra amin'ny IA"],
-      },
-      {
-        q: "3. Inona avy ireo tolotra na vokatra phares tianao asongadina indrindra?",
-        options: ["Vokatra / Sary ary vidiny", "Tolotra sy fanazavana", "Samy misy azy roa"],
-      },
-      {
-        q: "4. Inona no loko fototra sy style visuel tianao hampiasaina?",
-        options: [
-          "Manga Moderne & Fotsy",
-          "Maitso Émeraude & Voajanahary",
-          "Mainty / Dark Luxe",
-          "Volamena / Élégant",
-        ],
-      },
-      {
-        q: "5. Mila section Hero maromaro (Slides am-panombohana) ve ianao?",
-        options: ["Eny, Slide 2 na 3 misy sary tsara", "Iray ihany dia ampy"],
-      },
-      {
-        q: "6. Inona no nomerao WhatsApp fandraisana kaomandy na hafatra?",
-        options: ["Mila bokatra WhatsApp direct", "Aleo formulaire e-mail sy antso"],
-      },
-      {
-        q: "7. Inona no adiresy fizika sy tanàna hisy ny orinasa na boutique?",
-        options: ["Antananarivo / Madagascar", "En ligne ihany (Tsy misy boutique)"],
-      },
-      {
-        q: "8. Inona avy ireo mot-clé Google (SEO) tianao hahitana anao haingana amin'ny recherche?",
-        options: [
-          "Achat, boutique, Madagascar",
-          "Services, entreprise, Antananarivo",
-          "Tolo-kevitra automatique",
-        ],
-      },
-      {
-        q: "9. Tianao hisy bokatra PWA (Installer l'application) amin'ny mobile ve?",
-        options: ["Eny, PWA complet amin'ny smartphone", "Tsia, site web ihany"],
-      },
-      {
-        q: "10. Inona no Code PIN tianao hidirana ao amin'ny Panneau Admin (CMS)?",
-        options: ["1234 (Azo ovaina rehefa avy eo)", "Code PIN personnalisé"],
-      },
-      {
-        q: "11. Tianao hisy section 'Momba anay' (A propos) sy tantaran'ny marika ve?",
-        options: ["Eny, misy sary sy tantara", "Tsia, aleo mivantana amin'ny vokatra"],
-      },
-      {
-        q: "12. Inona no fomba fandoavam-bola sy kaomandy tianao hiseho?",
-        options: [
-          "Paiement / Kaomandy WhatsApp",
-          "Mobile Money (Orange/Airtel)",
-          "Paiement en espèces amin'ny livraison",
-        ],
-      },
-      {
-        q: "13. Tianao hisy section 'Fijetsena sy Avis clients' (Testimonials) ve?",
-        options: ["Eny, misy kintana sy hevitry ny mpanjifa", "Tsia"],
-      },
-      {
-        q: "14. Manana nom de domaine manokana ve ianao (ohatra: .mg na .com)?",
-        options: ["Manana domaine (.mg / .com)", "Mbola hampiasa le lien gratuit aloha"],
-      },
-      {
-        q: "15. Inona no fanampiny na fonctionnalité manokana tianao hampiana ao amin'ny site?",
-        options: [
-          "Galerie d'images",
-          "Formulaire de contact dynamique",
-          "Filtre karkara vokatra",
-          "Espace membres / Client",
-        ],
-      },
-    ],
-    en: [
-      {
-        q: "1. What is the exact and official name of your brand or company?",
-        options: ["Specific name", "To be suggested by AI"],
-      },
-      {
-        q: "2. What is your main slogan or tagline?",
-        options: ["Professional slogan", "Ideas by AI"],
-      },
-      {
-        q: "3. What are the key products or services to highlight?",
-        options: ["Product catalog with prices", "Services & quote", "Both"],
-      },
-      {
-        q: "4. What color palette and visual style do you prefer?",
-        options: [
-          "Modern Blue & White",
-          "Emerald Green & Nature",
-          "Dark / Luxury",
-          "Gold / Elegant",
-        ],
-      },
-      {
-        q: "5. Would you like multiple hero slider carousels?",
-        options: ["Yes, 2-3 dynamic slides", "Single Hero is enough"],
-      },
-      {
-        q: "6. What is your WhatsApp number for orders?",
-        options: ["Direct WhatsApp button", "Email & call form"],
-      },
-      {
-        q: "7. What is the physical address or city of your business?",
-        options: ["Antananarivo / Madagascar", "100% Online (No store)"],
-      },
-      {
-        q: "8. Which Google SEO keywords will you target?",
-        options: ["Shopping, boutique, Madagascar", "Services, company", "Suggest automatically"],
-      },
-      {
-        q: "9. Do you want to enable the mobile PWA installation button?",
-        options: ["Yes, 100% PWA installable", "No, standard web site"],
-      },
-      {
-        q: "10. What security PIN code do you want for the Admin area?",
-        options: ["1234 (Changeable later)", "Custom PIN code"],
-      },
-      {
-        q: "11. Would you like a detailed 'About Us' section?",
-        options: ["Yes, presentation & values", "No, go straight to content"],
-      },
-      {
-        q: "12. Which ordering and payment methods to display?",
-        options: ["Direct WhatsApp order", "Mobile Money (Orange/Airtel)", "Cash on delivery"],
-      },
-      {
-        q: "13. Do you want a customer testimonials section?",
-        options: ["Yes, with star ratings", "No"],
-      },
-      {
-        q: "14. Do you have a custom domain name?",
-        options: ["Yes (.mg / .com)", "No, use free link"],
-      },
-      {
-        q: "15. What extra feature would you like to include?",
-        options: ["Photo gallery", "Interactive form", "Category filters", "Client portal"],
-      },
-    ],
-    zh: [
-      { q: "1. 您的品牌或公司的准确官方名称是什么？", options: ["特定名称", "由 AI 建议"] },
-      { q: "2. 您的主要标语或口号是什么？", options: ["专业标语", "AI 创意"] },
-      {
-        q: "3. 要突出的主要产品或服务是什么？",
-        options: ["带价格的产品目录", "服务与报价", "两者兼有"],
-      },
-      {
-        q: "4. 您喜欢什么配色方案和视觉风格？",
-        options: ["现代蓝白", "翡翠绿自然", "暗黑奢华", "金色优雅"],
-      },
-      { q: "5. 您需要多个轮播图幻灯片吗？", options: ["是，2-3个动态幻灯片", "单个即可"] },
-      {
-        q: "6. 您用于接收订单的 WhatsApp 号码是什么？",
-        options: ["直接 WhatsApp 按钮", "电子邮件和致电表单"],
-      },
-      {
-        q: "7. 您公司的实际地址或城市在哪里？",
-        options: ["安塔那那利佛 / 马达加斯加", "100% 在线（无实体店）"],
-      },
-      {
-        q: "8. 您将优先针对哪些 Google SEO 关键词？",
-        options: ["购物、精品店、马达加斯加", "服务、公司", "自动建议"],
-      },
-      { q: "9. 您想启用移动端 PWA 安装按钮吗？", options: ["是，100% 可安装 PWA", "否，标准网站"] },
-      {
-        q: "10. 您希望管理后台使用什么安全 PIN 码？",
-        options: ["1234（稍后可更改）", "自定义 PIN 码"],
-      },
-      {
-        q: "11. 您需要详细的“关于我们”部分吗？",
-        options: ["是，介绍与价值观", "否，直接进入内容"],
-      },
-      {
-        q: "12. 您希望显示哪些订购和支付方式？",
-        options: ["直接 WhatsApp 订购", "移动支付", "货到付款"],
-      },
-      { q: "13. 您想要客户见证或评价部分吗？", options: ["是，带星级评分", "否"] },
-      { q: "14. 您有自定义域名吗？", options: ["有 (.mg / .com)", "否，使用免费链接"] },
-      { q: "15. 您想包含哪些其他功能？", options: ["相册", "交互式表单", "分类筛选", "客户专区"] },
-    ],
-    it: [
-      {
-        q: "1. Qual è il nome esatto e ufficiale del vostro marchio o azienda?",
-        options: ["Nome specifico", "Da suggerire dall'IA"],
-      },
-      {
-        q: "2. Qual è il vostro slogan o tagline principale?",
-        options: ["Slogan professionale", "Idee dall'IA"],
-      },
-      {
-        q: "3. Quali sono i prodotti o servizi di punta da mettere in evidenza?",
-        options: ["Catalogo prodotti con prezzi", "Servizi e preventivo", "Entrambi"],
-      },
-      {
-        q: "4. Quale palette di colori e stile visivo preferite?",
-        options: [
-          "Blu Moderno & Bianco",
-          "Verde Smeraldo & Natura",
-          "Scuro / Dark Luxe",
-          "Dorato / Elegante",
-        ],
-      },
-      {
-        q: "5. Desiderate più slider caroselli Hero nella home?",
-        options: ["Sì, 2 o 3 slide dinamiche", "Un solo Hero basta"],
-      },
-      {
-        q: "6. Qual è il vostro numero WhatsApp per ricevere ordini?",
-        options: ["Pulsante WhatsApp diretto", "Modulo e-mail e chiamata"],
-      },
-      {
-        q: "7. Qual è l'indirizzo fisico o la città della vostra azienda?",
-        options: ["Antananarivo / Madagascar", "100% Online (Senza negozio)"],
-      },
-      {
-        q: "8. Quali parole chiave Google SEO intenderete mirare?",
-        options: [
-          "Acquisto, negozio, Madagascar",
-          "Servizi, azienda",
-          "Suggerisci automaticamente",
-        ],
-      },
-      {
-        q: "9. Volete abilitare il pulsante di installazione PWA mobile?",
-        options: ["Sì, PWA installabile al 100%", "No, sito web standard"],
-      },
-      {
-        q: "10. Quale codice PIN di sicurezza desiderate per l'area amministrativa?",
-        options: ["1234 (Modificabile in seguito)", "PIN personalizzato"],
-      },
-      {
-        q: "11. Desiderate una sezione 'Chi Siamo' dettagliata?",
-        options: ["Sì, con presentazione e valori", "No, passa diretto al contenuto"],
-      },
-      {
-        q: "12. Quali modalità di ordine e pagamento desiderate visualizzare?",
-        options: [
-          "Ordine diretto WhatsApp",
-          "Mobile Money (Orange/Airtel)",
-          "Pagamento alla consegna",
-        ],
-      },
-      {
-        q: "13. Volete una sezione di recensioni e testimonianze dei clienti?",
-        options: ["Sì, con valutazioni a stelle", "No"],
-      },
-      {
-        q: "14. Avete un nome di dominio personalizzato?",
-        options: ["Sì (.mg / .com)", "No, usa il link gratuito"],
-      },
-      {
-        q: "15. Quale funzionalità aggiuntiva desiderate includere?",
-        options: ["Galleria foto", "Modulo interattivo", "Filtro categorie", "Area clienti"],
-      },
-    ],
-    fr: [
-      {
-        q: "1. Quel est le nom exact et officiel de votre marque ou entreprise ?",
-        options: ["Nom spécifique", "À suggérer par l'IA"],
-      },
-      {
-        q: "2. Quel est votre slogan ou phrase d'accroche principale ?",
-        options: ["Slogan professionnel", "Idées par l'IA"],
-      },
-      {
-        q: "3. Quels sont les produits ou services phares à mettre en avant ?",
-        options: ["Catalogue produits avec prix", "Services & devis", "Les deux"],
-      },
-      {
-        q: "4. Quelle palette de couleurs et style visuel préférez-vous ?",
-        options: [
-          "Bleu Moderne & Blanc",
-          "Vert Émeraude & Nature",
-          "Sombre / Dark Luxe",
-          "Doré / Élégant",
-        ],
-      },
-      {
-        q: "5. Souhaitez-vous plusieurs carrousels/slides Hero d'accueil ?",
-        options: ["Oui, 2 ou 3 slides dynamiques", "Un seul Hero suffit"],
-      },
-      {
-        q: "6. Quel est votre numéro WhatsApp pour recevoir les commandes ?",
-        options: ["Bouton WhatsApp direct", "Formulaire e-mail & appel"],
-      },
-      {
-        q: "7. Quelle est l'adresse physique ou ville de votre entreprise ?",
-        options: ["Antananarivo / Madagascar", "100% En ligne (Sans boutique)"],
-      },
-      {
-        q: "8. Quels mots-clés Google (SEO) viserez-vous en priorité ?",
-        options: [
-          "Achat, boutique, Madagascar",
-          "Services, entreprise, Antananarivo",
-          "Suggérer automatiquement",
-        ],
-      },
-      {
-        q: "9. Voulez-vous activer le bouton PWA d'installation mobile ?",
-        options: ["Oui, PWA 100% installable sur mobile", "Non, site web standard"],
-      },
-      {
-        q: "10. Quel Code PIN de sécurité souhaitez-vous pour l'Espace Admin ?",
-        options: ["1234 (Modifiable plus tard)", "Code PIN personnalisé"],
-      },
-      {
-        q: "11. Souhaitez-vous une section 'À Propos' détaillée ?",
-        options: ["Oui, avec présentation et valeurs", "Non, passer direct au contenu"],
-      },
-      {
-        q: "12. Quels modes de commande et paiement souhaitez-vous afficher ?",
-        options: [
-          "Commande directe WhatsApp",
-          "Mobile Money (Orange/Airtel)",
-          "Paiement à la livraison",
-        ],
-      },
-      {
-        q: "13. Voulez-vous une section 'Avis & Témoignages Clients' ?",
-        options: ["Oui, avec notes étoiles", "Non"],
-      },
-      {
-        q: "14. Avez-vous un nom de domaine personnalisé (ex: .mg ou .com) ?",
-        options: ["Oui (.mg / .com)", "Non, utiliser le lien gratuit"],
-      },
-      {
-        q: "15. Quelle fonctionnalité supplémentaire souhaitez-vous inclure ?",
-        options: [
-          "Galerie photos",
-          "Formulaire interactif",
-          "Filtre par catégories",
-          "Espace client",
-        ],
-      },
-    ],
+  const fallbackQuestionsMapBySiteType: Record<
+    string,
+    Record<string, Array<{ q: string; options: string[] }>>
+  > = {
+    mg: {
+      vitrine: [
+        {
+          q: "1. Inona no anarana marina sy ofisialin'ny orinasanao na ny marika tianao ho hita?",
+          options: ["Anarana manokana", "Mila hevitra amin'ny IA"],
+        },
+        {
+          q: "2. Inona no slogan na andian-teny faneva lehibe indrindra amin'ny tranonkala?",
+          options: ["Slogan matihanina", "Mila hevitra amin'ny IA"],
+        },
+        {
+          q: "3. Inona avy ireo tolotra na asa sahaninao tianao haseho ao amin'ny fizarana 'Nos Services'?",
+          options: ["Tolotra sy fanazavana", "Vidiny sy sary", "Samy misy azy roa"],
+        },
+        {
+          q: "4. Inona no tantara fohy na sary tianao hapetraka ao amin'ny fizarana 'À propos de l'entreprise'?",
+          options: ["Tantara fohy", "Teny fampidirana", "Tsy misy aloha"],
+        },
+        {
+          q: "5. Inona avy ireo antony lehibe mahatonga ny mpanjifa hisafidy anao (Pourquoi nous choisir)?",
+          options: ["Garantie & kalitao", "Vidiny mirary", "Ekipa matihanina"],
+        },
+        {
+          q: "6. Inona no loko fototra sy style visuel tianao hampiasaina?",
+          options: [
+            "Manga Moderne & Fotsy",
+            "Maitso Émeraude & Voajanahary",
+            "Mainty / Dark Luxe",
+            "Volamena / Élégant",
+          ],
+        },
+        {
+          q: "7. Inona avy ireo tetikasa na 'Réalisations / Portfolio' efa vita tianao haseho amin'ny sary?",
+          options: ["Sary tetikasa", "Lisitra tsotra", "Tsy misy aloha"],
+        },
+        {
+          q: "8. Inona no tsikera na 'Témoignages clients' tianao hiseho?",
+          options: ["Eny, misy kintana sy hevitra", "Tsia, tsy mila aloha"],
+        },
+        {
+          q: "9. Iza avy ireo mpikambana ao amin'ny 'Équipe' tianao asongadina sy ny andraikiny?",
+          options: ["Mpitarika sy mpiasa", "Tsy misy aloha"],
+        },
+        {
+          q: "10. Inona avy ireo fanontaniana matetika apetraky ny mpanjifa (FAQ) tianao hovaliana?",
+          options: ["Ora fisokafana & livraison", "Taratasy ilaina", "Samy misy"],
+        },
+        {
+          q: "11. Mila fizarana 'Blog / Actualités' ve ianao hanoratana vaovao momba ny orinasa?",
+          options: ["Eny, misy lahatsoratra", "Tsia, tsy mila aloha"],
+        },
+        {
+          q: "12. Inona no laharana WhatsApp handraisana hafatra sy hifandraisana amin'ny mpanjifa?",
+          options: ["Bokotra WhatsApp direct", "Antso mivantana ihany"],
+        },
+        {
+          q: "13. Inona no adiresy fizika na toerana misy anareo mba hametrahana ny sarintany (Carte)?",
+          options: ["Antananarivo, Madagascar", "En ligne ihany"],
+        },
+        {
+          q: "14. Tianao hisy bokotra fametrahana fampiharana amin'ny finday (PWA) ve ny site?",
+          options: ["Eny, PWA complet", "Tsia, site web tsotra"],
+        },
+        {
+          q: "15. Inona no Code PIN tianao hidirana ao amin'ny Espace Admin handaharana ny votoatiny?",
+          options: ["1234 (Azo ovaina)", "Code PIN personnalisé"],
+        },
+      ],
+      portfolio: [
+        {
+          q: "1. Inona no anarana feno sy sary famantarana tianao hapetraka ao amin'ny Portfolio-nao?",
+          options: ["Anarana manokana", "Anaram-bositra matihanina"],
+        },
+        {
+          q: "2. Inona no anaram-boninahitra matihanina na 'Métier/Spécialité' tianao ho hita misongadina amin'ny Hero?",
+          options: [
+            "Designer / Développeur",
+            "Photographe / Vidéaste",
+            "Artiste / Créateur",
+            "Consultant / Coach",
+          ],
+        },
+        {
+          q: "3. Inona no tantaram-piainana fohy na 'À propos' momba ny zotram-piainanao sy ny asanao?",
+          options: ["Biography fohy", "Tantara lava kokoa", "Tsy misy aloha"],
+        },
+        {
+          q: "4. Inona avy ireo tolotra sy 'Mes Services' arosonao ho an'ny mpanjifa sy ny tombana sariny?",
+          options: ["Prestations detaille", "Tarif horaire", "Samy misy"],
+        },
+        {
+          q: "5. Inona avy ireo fahaiza-manao sy fitaovana (Mes Compétences) tianao haseho amin'ny badges?",
+          options: ["Teknika (Hard skills)", "Fomba fiasa (Soft skills)", "Izy roa miaraka"],
+        },
+        {
+          q: "6. Inona avy ireo tetikasa na sanganasa tsara indrindra (Portfolio) tianao haseho amin'ny sary?",
+          options: ["Sary sy fanazavana", "Rohy mankany amin'ny tetikasa", "Samy misy"],
+        },
+        {
+          q: "7. Mila fizarana 'Études de cas' ve ianao hanazavana ny fomba namahana olana ho an'ny mpanjifa?",
+          options: ["Eny, famakafakana tetikasa 1 na 2", "Tsia, sary tsotra dia ampy"],
+        },
+        {
+          q: "8. Inona no teny fankasitrahana na 'Témoignages' azonao avy amin'ireo mpanjifa taloha?",
+          options: ["Eny, misy teny mpanjifa", "Tsia, mbola tsy misy"],
+        },
+        {
+          q: "9. Inona avy ireo tolotra misy vidiny raikitra (Tarifs / Offres) tianao haseho?",
+          options: ["Packs / Formules", "Devis sur mesure ihany"],
+        },
+        {
+          q: "10. Inona avy ireo fanontaniana matetika apetraky ny mpanjifa aminao (FAQ)?",
+          options: ["Délai sy famandrihana", "Fitaovana ampiasaina", "Samy misy"],
+        },
+        {
+          q: "11. Inona no fomba tianao handraisana famandrihana fotoana na hafatra (Contact / Réservation)?",
+          options: [
+            "Formulaire de contact",
+            "Bokotra famandrihana Calendrier",
+            "WhatsApp mivantana",
+          ],
+        },
+        {
+          q: "12. Inona no loko fototra tianao hampiasaina amin'ny site?",
+          options: ["Volamena kanto", "Manga madio", "Black minimal", "Loko pastel milamina"],
+        },
+        {
+          q: "13. Inona no laharana WhatsApp hifandraisan'ny mpanjifa mivantana aminao?",
+          options: ["Bokotra WhatsApp direct", "Email ihany aloha"],
+        },
+        {
+          q: "14. Mila bokotra PWA fametrahana fampiharana amin'ny finday ve ianao?",
+          options: ["Eny, PWA complet", "Tsia, site tsotra"],
+        },
+        {
+          q: "15. Inona no Code PIN tianao hapetraka hidirana amin'ny fitantanana (Admin)?",
+          options: ["1234 (Azo ovaina)", "Code PIN personnalisé"],
+        },
+      ],
+      ecommerce: [
+        {
+          q: "1. Inona no anarana ofisialy tianao homena an'ity Boutique E-commerce ity?",
+          options: ["Anarana fivarotana", "Mila soso-kevitra amin'ny IA"],
+        },
+        {
+          q: "2. Inona no slogan na faneva mamaritra ny vokatra amidinao (Hero / Promotions)?",
+          options: ["Slogan fampiroboroboana varotra", "Tsy misy aloha"],
+        },
+        {
+          q: "3. Inona avy ireo sokajin-javatra na 'Catégories' hisy ao amin'ny fivarotana?",
+          options: ["Sokajy 3 na 4 samihafa", "Sokajy iray ihany feno vokatra"],
+        },
+        {
+          q: "4. Inona avy ireo 'Produits populaires' tianao haseho voalohany amin'ny sary sy vidiny?",
+          options: ["Vokatra be mpitia indrindra", "Vokatra tsara kalitao indrindra"],
+        },
+        {
+          q: "5. Inona avy ireo 'Nouveautés' na vokatra vao tonga tianao hampahafantarina?",
+          options: ["Arrivage vaovao farany", "Tsy misy aloha"],
+        },
+        {
+          q: "6. Iza avy ireo 'Meilleures ventes' tianao asongadina manokana?",
+          options: ["Bestsellers misy kintana", "Tsy asongadina aloha"],
+        },
+        {
+          q: "7. Manana tolotra manokana na fihenam-bidy 'Offres spéciales / Promotions' ve ianao?",
+          options: ["Eny, misy fihenam-bidy %", "Tsia, vidiny raikitra daholo"],
+        },
+        {
+          q: "8. Inona no tsikera na 'Avis clients' tianao hapetraka hampitomboana ny fahatokisana?",
+          options: ["Kintana sy hevitra tsara mpanjifa", "Tsy asiana aloha"],
+        },
+        {
+          q: "9. Inona avy ireo fanontaniana momba ny livraison sy fandoavam-bola (FAQ)?",
+          options: ["Fandefasana, fandoavam-bola, fiverenan-entana", "Samy misy"],
+        },
+        {
+          q: "10. Mila fizarana 'Blog / Torohevitra' ve ianao hanoratana momba ny vokatra?",
+          options: ["Eny, torohevitra momba ny fampiasana", "Tsia, fivarotana madio ihany"],
+        },
+        {
+          q: "11. Inona no fomba hahazoan'ny mpanjifa fanampiana (Contact / Support)?",
+          options: ["Formulaire sy WhatsApp", "WhatsApp ihany mivantana"],
+        },
+        {
+          q: "12. Inona avy ireo fomba fandoavam-bola azo ekena (Mobile Money, Espèces, sns.)?",
+          options: [
+            "WhatsApp checkout (Mobile Money)",
+            "Paiement à la livraison",
+            "Izy roa miaraka",
+          ],
+        },
+        {
+          q: "13. Inona no laharana WhatsApp handraisana sy hanamarinana ny kaomandy mivantana?",
+          options: ["WhatsApp direct handraisana kaomandy", "Tsy misy nomerao aloha"],
+        },
+        {
+          q: "14. Tianao hisy bokotra fametrahana PWA ho an'ny fampiharana finday ve?",
+          options: ["Eny, PWA ho an'ny smartphone", "Tsia, site web tsotra"],
+        },
+        {
+          q: "15. Inona no Code PIN tianao hapetraka hidirana ao amin'ny fitantanana (Admin)?",
+          options: ["1234 (Azo ovaina)", "Code PIN personnalisé"],
+        },
+      ],
+      hotel: [
+        {
+          q: "1. Inona no anarana ofisialin'ny Hotel na Restaurant tianao ho hita?",
+          options: ["Anarana fandraisam-bahiny", "Mila hevitra amin'ny IA"],
+        },
+        {
+          q: "2. Inona no slogan na teny faneva manasa hiala sasatra na hisakafo (Hero)?",
+          options: ["Teny manasa hiala sasatra", "Slogan tsotra momba ny kalitao"],
+        },
+        {
+          q: "3. Inona no tantara na tontolo manodidina tianao haseho (À propos)?",
+          options: ["Tantara fohy sy toerana misy", "Sary sy andian-teny kely"],
+        },
+        {
+          q: "4. Inona avy ireo karazana efitra na sakafo 'Chambres / Menu' arosonareo?",
+          options: [
+            "Efitrano 3 na 4 samihafa",
+            "Sakafo/Menu isan-karazany",
+            "Samy misy efitrano sy sakafo",
+          ],
+        },
+        {
+          q: "5. Inona avy ireo tolotra fanampiny misy (Spa, Piscine, Navette, sns.)?",
+          options: ["Prestations completes", "Tsy asiana aloha"],
+        },
+        {
+          q: "6. Inona avy ireo sary tianao hapetraka ao amin'ny 'Galerie photos'?",
+          options: ["Efitrano, lakozia, toerana malalaka", "Sary isan-karazany"],
+        },
+        {
+          q: "7. Inona no kisary na sandan'ny 'Tarifs' tianao haseho mazava?",
+          options: ["Vidiny isaky ny alina na sakafo", "Arakaraka ny devis ihany"],
+        },
+        {
+          q: "8. Inona no fomba fiasa tianao amin'ny famandrihana (Réservation direct na WhatsApp)?",
+          options: ["Formulaire famandrihana sy WhatsApp", "WhatsApp checkout direct"],
+        },
+        {
+          q: "9. Inona avy ireo tsikera na 'Avis clients' tianao hiseho eo amin'ny tranonkala?",
+          options: ["Teny fiderana avy amin'ny vahiny", "Tsy asiana aloha"],
+        },
+        {
+          q: "10. Inona avy ireo fanontaniana matetika apetraky ny mpitsidika (FAQ)?",
+          options: ["Check-in/out, fandoavam-bola, biby fiompy", "Samy misy"],
+        },
+        {
+          q: "11. Inona no adiresy, finday ary sarintany tianao hapetraka (Contact + Carte)?",
+          options: ["Antananarivo / Madagascar", "Toerana amoron-dranomasina", "Toerana hafa"],
+        },
+        {
+          q: "12. Inona no loko fototra tianao hampiasaina?",
+          options: ["Volamena kanto", "Manga milamina", "Maitso voajanahary", "Dark sy lafo vidy"],
+        },
+        {
+          q: "13. Inona no laharana WhatsApp handraisana ny famandrihana efitra na latabatra?",
+          options: ["WhatsApp direct ho an'ny famandrihana", "Tsy asiana aloha"],
+        },
+        {
+          q: "14. Tianao hisy fampiharana azo apetraka amin'ny finday (PWA) ve ny site?",
+          options: ["Eny, PWA feno", "Tsia, tranonkala tsotra"],
+        },
+        {
+          q: "15. Inona no Code PIN tianao hidirana ao amin'ny Espace Admin?",
+          options: ["1234 (Azo ovaina)", "Code PIN personnalisé"],
+        },
+      ],
+      school: [
+        {
+          q: "1. Inona no anarana ofisialin'ny Sekoly na ny Foibe Fampianarana?",
+          options: ["Anaran'ny sekoly", "Mila soso-kevitra amin'ny IA"],
+        },
+        {
+          q: "2. Inona no faneva na teny filamatra momba ny fampianarana (Hero)?",
+          options: ["Teny faneva momba ny fahombiazana", "Slogan tsotra fotsiny"],
+        },
+        {
+          q: "3. Inona no teny fampidirana na fanehoana ny sekoly (Présentation)?",
+          options: ["Tantaran'ny sekoly sy the mpitantana", "Sary sy teny fohy fotsiny"],
+        },
+        {
+          q: "4. Inona avy ireo taranja na fampianarana 'Formations / Cours' misy ao?",
+          options: ["Fampianarana isan-karazany", "Cours andalam-pandrosoana"],
+        },
+        {
+          q: "5. Iza avy ireo mpampianatra na 'Enseignants' tianao asongadina amin'ny sary?",
+          options: ["Mpanabe matihanina", "Ekipa mpitantana", "Tsy asiana aloha"],
+        },
+        {
+          q: "6. Inona no fandaharam-pianarana na 'Programmes' tianao ho fantatry ny ray aman-dreny?",
+          options: ["Fandaharam-potoana sy hetsika", "Tsy asiana aloha"],
+        },
+        {
+          q: "7. Inona no fandoavam-bola na sarim-pianarana (Tarifs) tianao haseho?",
+          options: ["Frais isan-taona/fianarana", "Azo ovaina arakaraka ny fifanarahana"],
+        },
+        {
+          q: "8. Inona avy ireo teny fankasitrahana 'Témoignages' avy amin'ny mpianatra na ray aman-dreny?",
+          options: ["Eny, teny mpanjifa/ray aman-dreny", "Tsia, tsy misy aloha"],
+        },
+        {
+          q: "9. Inona avy ireo fanontaniana matetika apetraka momba ny sekoly (FAQ)?",
+          options: ["Fepetra fidirana sy fitaovana", "Samy misy"],
+        },
+        {
+          q: "10. Inona no fomba fanaovana 'Inscription' na famenoana taratasy fidirana?",
+          options: ["Formulaire fidirana mivantana", "Hifampiresaka amin'ny WhatsApp"],
+        },
+        {
+          q: "11. Inona no adiresy, finday ary mailaka hifandraisana (Contact)?",
+          options: ["Adiresy sy ora fisokafana", "En ligne ihany aloha"],
+        },
+        {
+          q: "12. Inona no loko fototra tianao?",
+          options: ["Manga sekoly matihanina", "Orange mavitrika", "Maitso fanantenana"],
+        },
+        {
+          q: "13. Inona no laharana WhatsApp handraisana sy hovaliana ny fanontanian'ny ray aman-dreny?",
+          options: ["WhatsApp admin sekoly", "Tsy asiana aloha"],
+        },
+        {
+          q: "14. Tianao ho azo apetraka amin'ny finday ho fampiharana (PWA) ve ny site?",
+          options: ["Eny, PWA ho an'ny smartphone", "Tsia, site web tsotra"],
+        },
+        {
+          q: "15. Inona no Code PIN hidirana ao amin'ny fitantanana (Admin)?",
+          options: ["1234 (Azo ovaina)", "Code PIN personnalisé"],
+        },
+      ],
+      erp: [
+        {
+          q: "1. Inona no anarana ofisialin'ny Fikambanana na ONG-nareo?",
+          options: ["Anaran'ny fikambanana", "Mila soso-kevitra amin'ny IA"],
+        },
+        {
+          q: "2. Inona no teny faneva manaitra na miantso fanohanana (Hero / Slogans)?",
+          options: ["Teny faneva manaitra", "Slogan tsotra momba ny asantsika"],
+        },
+        {
+          q: "3. Inona no tantara fohy sy fanazavana ny nijoroanereao (À propos)?",
+          options: ["Tantaran'ny fikambanana", "Teny fampidirana fotsiny"],
+        },
+        {
+          q: "4. Inona avy ireo tanjona lehibe sy sori-dalana (Notre Mission)?",
+          options: ["Tanjon'ny tetikasa sy mission", "Sary sy teny kely dia ampy"],
+        },
+        {
+          q: "5. Inona avy ireo asa efa vita na mbola hatao (Nos Activités)?",
+          options: ["Asa sy tetikasa efa vita", "Tsy asongadina aloha"],
+        },
+        {
+          q: "6. Inona avy ireo hetsika na fivoriana ho avy (Événements)?",
+          options: ["Kalandrie hetsika ho avy", "Tsy asiana kalandrie aloha"],
+        },
+        {
+          q: "7. Iza avy ireo mpikambana ao amin'ny birao na 'Équipe' tianao asongadina?",
+          options: ["Mpitarika sy mpiasa mpanampy", "Tsy asiana aloha"],
+        },
+        {
+          q: "8. Iza avy ireo mpiara-miombon'antoka na 'Partenaires' tianao haseho logo?",
+          options: ["Logon'ny mpiara-miasa", "Tsy misy mpiara-miasa aloha"],
+        },
+        {
+          q: "9. Inona avy ireo sary tianao hapetraka ao amin'ny 'Galerie'?",
+          options: ["Asa tany an-toerana sy fizarana", "Sary isan-karazany"],
+        },
+        {
+          q: "10. Inona no fomba fandraisana anjara na fanaovana fanomezana (Don / Adhérer)?",
+          options: ["Bokotra fanaovana Don sy adhésion", "Hifandray mivantana amin'ny finday"],
+        },
+        {
+          q: "11. Inona avy ireo fanontaniana matetika apetraka momba ny fikambanana (FAQ)?",
+          options: ["Ahoana ny fomba fanampiana", "Samy misy"],
+        },
+        {
+          q: "12. Inona no adiresy sy fomba hifandraisana amin'ny sekretera (Contact)?",
+          options: ["Adiresy sy mailaka", "An-tariby ihany"],
+        },
+        {
+          q: "13. Inona no loko fototra fampiasanareo?",
+          options: ["Maitso fanantenana", "Manga voajanahary", "Orange sy mavitrika"],
+        },
+        {
+          q: "14. Inona no laharana WhatsApp fampiasan'ny fikambanana hifandraisana mivantana?",
+          options: ["WhatsApp orinasa/fikambanana", "Tsy asiana aloha"],
+        },
+        {
+          q: "15. Inona no Code PIN tianao hapetraka amin'ny Espace Admin?",
+          options: ["1234 (Azo ovaina)", "Code PIN personnalisé"],
+        },
+      ],
+    },
+    fr: {
+      vitrine: [
+        {
+          q: "1. Quel est le nom exact et officiel de votre entreprise ou marque ?",
+          options: ["Nom spécifique", "À suggérer par l'IA"],
+        },
+        {
+          q: "2. Quel est votre slogan ou phrase d'accroche principale ?",
+          options: ["Slogan professionnel", "Idées par l'IA"],
+        },
+        {
+          q: "3. Quels sont les services clés à mettre en avant (Nos Services) ?",
+          options: ["Catalogue de services", "Détails et tarifs", "Les deux"],
+        },
+        {
+          q: "4. Quelle est l'histoire ou la vision à présenter (À propos) ?",
+          options: ["Présentation courte", "Histoire détaillée", "Pas de section pour l'instant"],
+        },
+        {
+          q: "5. Pourquoi les clients devraient-ils vous choisir (Pourquoi nous choisir) ?",
+          options: ["Garantie & Qualité", "Prix attractifs", "Équipe experte"],
+        },
+        {
+          q: "6. Quelle palette de couleurs et style visuel préférez-vous ?",
+          options: [
+            "Bleu Moderne & Blanc",
+            "Vert Émeraude & Nature",
+            "Sombre / Dark Luxe",
+            "Doré / Élégant",
+          ],
+        },
+        {
+          q: "7. Quelles réalisations passées souhaitez-vous afficher (Réalisations) ?",
+          options: ["Photos de projets", "Liste textuelle", "Pas de réalisations pour l'instant"],
+        },
+        {
+          q: "8. Quels avis ou témoignages clients souhaitez-vous afficher ?",
+          options: ["Avis étoilés authentiques", "Pas d'avis pour le moment"],
+        },
+        {
+          q: "9. Quels membres clés de l'équipe souhaitez-vous présenter ?",
+          options: ["Dirigeants et employés", "Pas de section équipe"],
+        },
+        {
+          q: "10. Quelles questions fréquentes souhaitez-vous intégrer (FAQ) ?",
+          options: ["Horaires et livraisons", "Conditions d'inscription", "Les deux"],
+        },
+        {
+          q: "11. Souhaitez-vous une section 'Blog / Actualités' pour vos articles ?",
+          options: ["Oui, avec articles fictifs", "Non, pas nécessaire"],
+        },
+        {
+          q: "12. Quel est votre numéro WhatsApp pour recevoir les messages des clients ?",
+          options: ["Bouton WhatsApp direct", "Formulaire e-mail uniquement"],
+        },
+        {
+          q: "13. Quelle est votre adresse physique pour la carte de contact ?",
+          options: ["Antananarivo / Madagascar", "En ligne uniquement"],
+        },
+        {
+          q: "14. Voulez-vous activer le bouton PWA d'installation mobile ?",
+          options: ["Oui, PWA 100% installable", "Non, site web simple"],
+        },
+        {
+          q: "15. Quel Code PIN de sécurité souhaitez-vous pour l'Espace Admin ?",
+          options: ["1234 (Modifiable)", "Code personnalisé"],
+        },
+      ],
+      portfolio: [
+        {
+          q: "1. Quel nom professionnel ou nom de marque voulez-vous afficher dans votre Portfolio ?",
+          options: ["Nom propre", "Pseudonyme artistique"],
+        },
+        {
+          q: "2. Quel est votre titre professionnel ou spécialité à mettre en avant (Hero) ?",
+          options: [
+            "Designer / Développeur",
+            "Photographe / Vidéaste",
+            "Artiste / Créateur",
+            "Consultant / Coach",
+          ],
+        },
+        {
+          q: "3. Quelle courte biographie ou texte de présentation souhaitez-vous (À propos) ?",
+          options: ["Courte biographie", "Parcours détaillé", "Pas de biographie"],
+        },
+        {
+          q: "4. Quels sont les services spécifiques que vous proposez (Mes Services) ?",
+          options: ["Prestations détaillées", "Tarifs horaires", "Les deux"],
+        },
+        {
+          q: "5. Quelles compétences techniques et outils (Mes Compétences) souhaitez-vous afficher ?",
+          options: ["Compétences techniques (Hard)", "Savoir-être (Soft skills)", "Les deux"],
+        },
+        {
+          q: "6. Quels projets ou créations phares souhaitez-vous présenter (Portfolio) ?",
+          options: ["Images et descriptions", "Liens externes", "Les deux"],
+        },
+        {
+          q: "7. Souhaitez-vous une section 'Études de cas' pour détailler vos meilleurs projets ?",
+          options: ["Oui, analyse de 1 ou 2 projets", "Non, de simples images suffisent"],
+        },
+        {
+          q: "8. Quels témoignages de clients ou recommendations voulez-vous afficher ?",
+          options: ["Oui, témoignages clients", "Non, pas d'avis pour l'instant"],
+        },
+        {
+          q: "9. Quels sont vos forfaits ou grilles de tarifs ('Tarifs / Offres') ?",
+          options: ["Forfaits / Packs", "Devis sur mesure uniquement"],
+        },
+        {
+          q: "10. Quelles questions fréquentes de vos prospects souhaitez-vous aborder (FAQ) ?",
+          options: ["Délais et réservations", "Méthode de travail", "Les deux"],
+        },
+        {
+          q: "11. Quel type de formulaire de contact ou réservation préférez-vous ?",
+          options: ["Formulaire classique", "Prise de rendez-vous Calendrier", "WhatsApp direct"],
+        },
+        {
+          q: "12. Quel style visuel et palette de couleurs préférez-vous pour votre Portfolio ?",
+          options: ["Doré élégant", "Bleu épuré", "Noir minimaliste", "Pastel doux"],
+        },
+        {
+          q: "13. Quel est votre numéro WhatsApp pour recevoir les messages professionnels ?",
+          options: ["Bouton WhatsApp direct", "E-mail uniquement"],
+        },
+        {
+          q: "14. Souhaitez-vous inclure le bouton d'installation PWA sur mobile ?",
+          options: ["Oui, PWA complet", "Non, site simple"],
+        },
+        {
+          q: "15. Quel Code PIN souhaitez-vous pour sécuriser votre tableau de bord Admin ?",
+          options: ["1234 (Modifiable)", "Code personnalisé"],
+        },
+      ],
+      ecommerce: [
+        {
+          q: "1. Quel est le nom officiel de votre boutique de vente en ligne (E-commerce) ?",
+          options: ["Nom de la boutique", "À suggérer par l'IA"],
+        },
+        {
+          q: "2. Quel est votre slogan de vente ou message de bienvenue (Hero / Promotions) ?",
+          options: ["Slogan promotionnel d'impact", "Pas de slogan particulier"],
+        },
+        {
+          q: "3. Quelles sont les catégories de produits clés à afficher (Catégories) ?",
+          options: ["3 ou 4 catégories illustrées", "Une seule catégorie générale"],
+        },
+        {
+          q: "4. Quels sont les articles phares à présenter dans 'Produits populaires' ?",
+          options: ["Articles les plus vendus", "Articles coup de cœur de l'équipe"],
+        },
+        {
+          q: "5. Quels nouveaux produits souhaitez-vous mettre en avant ('Nouveautés') ?",
+          options: ["Derniers arrivages de saison", "Pas de nouveautés pour l'instant"],
+        },
+        {
+          q: "6. Quels produits souhaitez-vous classer dans les 'Meilleures ventes' ?",
+          options: ["Bestsellers avec avis étoilés", "Pas de bestsellers pour le moment"],
+        },
+        {
+          q: "7. Quelles réductions ou remises prévoyez-vous ('Offres spéciales') ?",
+          options: ["Réductions en pourcentage %", "Prix fixes sans promotion"],
+        },
+        {
+          q: "8. Quels avis de clients ou témoignages d'acheteurs souhaitez-vous afficher ?",
+          options: ["Avis étoilés sur les produits", "Pas d'avis pour le moment"],
+        },
+        {
+          q: "9. Quelles sont les questions fréquentes sur la livraison ou le paiement (FAQ) ?",
+          options: ["Livraison, paiements et retours", "Toutes les questions logistiques"],
+        },
+        {
+          q: "10. Souhaitez-vous une section 'Blog' pour des articles de conseil ou de mode ?",
+          options: ["Oui, pour le SEO de la boutique", "Non, boutique pure uniquement"],
+        },
+        {
+          q: "11. Comment les clients peuvent-ils contacter le service après-vente (Contact / Support) ?",
+          options: ["Formulaire & WhatsApp", "WhatsApp direct uniquement"],
+        },
+        {
+          q: "12. Quels modes de paiement acceptez-vous (Mobile Money, Espèces, etc.) ?",
+          options: ["Commande WhatsApp (Mobile Money)", "Paiement à la livraison", "Les deux"],
+        },
+        {
+          q: "13. Quel est votre numéro WhatsApp pour la réception directe des commandes ?",
+          options: ["WhatsApp direct pour les commandes", "Pas de numéro pour le moment"],
+        },
+        {
+          q: "14. Souhaitez-vous activer l'installation de l'application sur smartphone (PWA) ?",
+          options: ["Oui, application installable", "Non, site web simple"],
+        },
+        {
+          q: "15. Quel Code PIN de sécurité souhaitez-vous configurer pour le panneau Admin ?",
+          options: ["1234 (Modifiable)", "Code personnalisé"],
+        },
+      ],
+      hotel: [
+        {
+          q: "1. Quel est le nom de votre établissement (Hôtel / Restaurant) ?",
+          options: ["Nom de l'établissement", "À suggérer par l'IA"],
+        },
+        {
+          q: "2. Quel slogan ou invitation au voyage souhaitez-vous pour l'accueil (Hero) ?",
+          options: ["Slogan d'évasion et détente", "Slogan axé sur la qualité du service"],
+        },
+        {
+          q: "3. Quelle présentation ou histoire de l'établissement souhaitez-vous ('À propos') ?",
+          options: ["Présentation courte et situation", "Histoire détaillée et valeurs"],
+        },
+        {
+          q: "4. Quelles catégories de chambres ou menus phares proposez-vous ('Chambres / Menu') ?",
+          options: ["3 ou 4 catégories de chambres", "Menus et plats gastronomiques", "Les deux"],
+        },
+        {
+          q: "5. Quels sont les équipements et services disponibles (Spa, Piscine, etc.) ?",
+          options: ["Prestations et équipements complets", "Pas de services particuliers"],
+        },
+        {
+          q: "6. Quelles photos haute définition souhaitez-vous pour la 'Galerie photos' ?",
+          options: ["Chambres, cuisine et extérieurs", "Photos diverses de l'établissement"],
+        },
+        {
+          q: "7. Quelle est votre politique de prix ou grille tarifaire ('Tarifs') ?",
+          options: ["Tarifs par nuit ou par plat", "Sur devis uniquement"],
+        },
+        {
+          q: "8. Comment souhaitez-vous gérer les demandes de réservation ('Réservation') ?",
+          options: ["Formulaire complet de réservation", "WhatsApp direct uniquement"],
+        },
+        {
+          q: "9. Quels avis et retours de voyageurs/clients souhaitez-vous afficher ?",
+          options: ["Avis positifs étoilés de clients", "Pas d'avis pour l'instant"],
+        },
+        {
+          q: "10. Quelles questions fréquentes de vos hôtes souhaitez-vous aborder (FAQ) ?",
+          options: ["Check-in, paiements et annulations", "Toutes les questions fréquentes"],
+        },
+        {
+          q: "11. Quelle est votre adresse exacte pour la carte interactive (Contact + Carte) ?",
+          options: ["Antananarivo / Madagascar", "Ville côtière touristique", "Autre adresse"],
+        },
+        {
+          q: "12. Quel style visuel et palette de couleurs préférez-vous ?",
+          options: ["Doré & Luxe", "Bleu & Mer", "Vert & Nature", "Sombre & Chic"],
+        },
+        {
+          q: "13. Quel est votre numéro WhatsApp pour la confirmation rapide des réservations ?",
+          options: ["WhatsApp direct réservation", "Pas de numéro pour le moment"],
+        },
+        {
+          q: "14. Souhaitez-vous proposer l'installation de l'application en mode PWA ?",
+          options: ["Oui, application installable", "Non, site classique"],
+        },
+        {
+          q: "15. Quel Code PIN de sécurité souhaitez-vous pour l'accès au panneau d'administration ?",
+          options: ["1234 (Modifiable)", "Code personnalisé"],
+        },
+      ],
+      school: [
+        {
+          q: "1. Quel est le nom officiel de votre école ou centre de formation ?",
+          options: ["Nom de l'établissement", "À suggérer par l'IA"],
+        },
+        {
+          q: "2. Quel est votre slogan éducatif ou message fort de bienvenue (Hero) ?",
+          options: ["Slogan axé sur la réussite académique", "Message court de bienvenue"],
+        },
+        {
+          q: "3. Quel mot de la direction ou texte de présentation souhaitez-vous afficher ?",
+          options: ["Mot de la direction", "Historique de l'école", "Présentation courte"],
+        },
+        {
+          q: "4. Quelles sont les matières, cours ou filières proposés ('Formations') ?",
+          options: ["Catalogue des formations et cours", "Filières d'enseignement de base"],
+        },
+        {
+          q: "5. Quels enseignants ou formateurs clés souhaitez-vous présenter ?",
+          options: ["Enseignants avec diplômes et rôles", "Pas de section enseignants"],
+        },
+        {
+          q: "6. Quel calendrier scolaire ou détails de 'Programmes' souhaitez-vous partager ?",
+          options: ["Calendrier et programmes", "Pas de section programmes pour l'instant"],
+        },
+        {
+          q: "7. Quelle est votre grille de frais de scolarité ou de formation ('Tarifs') ?",
+          options: ["Grille tarifaire par niveau", "Tarifs sur demande uniquement"],
+        },
+        {
+          q: "8. Quels témoignages d'élèves, parents ou diplômés souhaitez-vous afficher ?",
+          options: ["Avis de parents et étudiants", "Pas de témoignages pour l'instant"],
+        },
+        {
+          q: "9. Quelles sont les questions fréquentes sur les admissions ou bourses (FAQ) ?",
+          options: ["Admissions, uniformes et bourses", "Toutes les questions pratiques"],
+        },
+        {
+          q: "10. Quel type de formulaire d'inscription en ligne préférez-vous ('Inscription') ?",
+          options: ["Formulaire complet d'inscription", "WhatsApp direct uniquement"],
+        },
+        {
+          q: "11. Quelles sont les coordonnées administratives complètes à afficher (Contact) ?",
+          options: ["Coordonnées et horaires administratifs", "Adresse e-mail uniquement"],
+        },
+        {
+          q: "12. Quelles couleurs de thème préférez-vous pour représenter votre établissement ?",
+          options: ["Bleu éducation", "Orange dynamique", "Vert académique"],
+        },
+        {
+          q: "13. Quel numéro WhatsApp utiliser pour le secrétariat académique ou les admissions ?",
+          options: ["WhatsApp direct secrétariat", "Pas de numéro WhatsApp"],
+        },
+        {
+          q: "14. Souhaitez-vous activer l'installation PWA mobile de l'école ?",
+          options: ["Oui, PWA installable", "Non, site web classique"],
+        },
+        {
+          q: "15. Quel Code PIN de sécurité souhaitez-vous configurer pour le panneau Admin ?",
+          options: ["1234 (Modifiable)", "Code personnalisé"],
+        },
+      ],
+      erp: [
+        {
+          q: "1. Quel est le nom officiel de votre association ou organisation ?",
+          options: ["Nom de l'association", "À suggérer par l'IA"],
+        },
+        {
+          q: "2. Quel est votre slogan mobilisateur ou appel au don principal (Hero) ?",
+          options: ["Appel au don fort", "Slogan d'impact communautaire"],
+        },
+        {
+          q: "3. Quelle est l'histoire et l'origine de votre association ('À propos') ?",
+          options: ["Histoire de fondation", "Présentation synthétique"],
+        },
+        {
+          q: "4. Quels sont les objectifs clés de l'organisation ('Notre Mission') ?",
+          options: ["Missions et impact ciblé", "Présentation courte et visuelle"],
+        },
+        {
+          q: "5. Quelles sont vos activités, actions de terrain ou réussites phares ?",
+          options: ["Projets en cours et réussites passées", "Pas de détails pour le moment"],
+        },
+        {
+          q: "6. Quels sont les événements ou campagnes à venir dans votre calendrier ?",
+          options: ["Calendrier d'événements à venir", "Pas de calendrier d'événements"],
+        },
+        {
+          q: "7. Quels membres du bureau ou bénévoles clés souhaitez-vous présenter ?",
+          options: ["Équipe dirigeante et bénévoles", "Pas d'équipe affichée pour l'instant"],
+        },
+        {
+          q: "8. Quels logos de partenaires ou sponsors souhaitez-vous afficher ?",
+          options: ["Logos de partenaires", "Pas de partenaires affichés"],
+        },
+        {
+          q: "9. Quelles photos de vos distributions ou actions souhaitez-vous pour la 'Galerie' ?",
+          options: ["Photos d'actions humanitaires et d'aide", "Photos diverses de l'équipe"],
+        },
+        {
+          q: "10. Quelles options d'adhésion ou de dons proposez-vous ('Faire un don / Adhérer') ?",
+          options: ["Formulaire de don et d'adhésion", "Contact direct pour les dons"],
+        },
+        {
+          q: "11. Quelles sont les questions fréquentes des donateurs ou bénévoles (FAQ) ?",
+          options: ["Utilisation des dons et bénévolat", "Toutes les questions fréquentes"],
+        },
+        {
+          q: "12. Quelles sont les coordonnées principales pour contacter l'organisation ?",
+          options: ["Coordonnées complètes", "Adresse e-mail uniquement"],
+        },
+        {
+          q: "13. Quelle palette de couleurs préférez-vous pour représenter l'organisation ?",
+          options: ["Vert espérance", "Bleu solidarité", "Orange mavitrika"],
+        },
+        {
+          q: "14. Quel est le numéro WhatsApp pour échanger directement avec l'équipe ?",
+          options: ["WhatsApp direct association", "Pas de numéro pour le moment"],
+        },
+        {
+          q: "15. Quel Code PIN de sécurité souhaitez-vous configurer pour le panneau Admin ?",
+          options: ["1234 (Modifiable)", "Code personnalisé"],
+        },
+      ],
+    },
+    en: {},
+    zh: {},
+    it: {},
   };
+
+  // Populate English, Chinese and Italian with simplified questions
+  fallbackQuestionsMapBySiteType.en = fallbackQuestionsMapBySiteType.fr;
+  fallbackQuestionsMapBySiteType.zh = fallbackQuestionsMapBySiteType.fr;
+  fallbackQuestionsMapBySiteType.it = fallbackQuestionsMapBySiteType.fr;
 
   const detectedLang =
     language ||
     (/amin'ny|ampiana|salama|misaotra|mangataka|tiko|resaka|amboaro|zavatra/i.test(prompt)
       ? "mg"
       : "fr");
-  const fallbackQuestions = fallbackQuestionsMap[detectedLang] || fallbackQuestionsMap.fr;
+  const questionsByLang =
+    fallbackQuestionsMapBySiteType[detectedLang] || fallbackQuestionsMapBySiteType.fr;
+  const fallbackQuestions = questionsByLang[siteType] || questionsByLang.vitrine;
 
   const adminHtml = `<!DOCTYPE html>
 <html lang="fr">
@@ -1321,6 +1910,55 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
       </div>
 
+      <!-- 8. Édition de TOUTES les Sections & Images du Site -->
+      <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 space-y-6">
+        <h3 class="text-lg font-bold text-indigo-300 flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 8. Édition de TOUTES les Sections & Images du Site
+          </span>
+          <span class="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded-md">Détection Auto</span>
+        </h3>
+        <p class="text-xs text-slate-400">
+          Cette section détecte automatiquement tous les éléments modifiables présents sur votre site web public (index.html). Vous pouvez modifier chaque texte, témoignage, service et chaque sary (image) directement ci-dessous !
+        </p>
+
+        <!-- Dynamic Tabs -->
+        <div class="flex border-b border-slate-700 gap-2">
+          <button type="button" id="tab-texts" class="px-4 py-2 text-sm font-semibold border-b-2 border-indigo-500 text-indigo-300 focus:outline-none">
+            📝 Tous les Textes (Hafatra sy soratra)
+          </button>
+          <button type="button" id="tab-images" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 focus:outline-none">
+            🖼️ Toutes les Images (Sary rehetra)
+          </button>
+        </div>
+
+        <!-- Dynamic Texts Panel -->
+        <div id="dynamic-texts-panel" class="space-y-4 pt-2">
+          <div class="flex justify-between items-center">
+            <h4 class="text-sm font-bold text-slate-300">Modifiez n'importe quel texte, titre ou témoignage :</h4>
+            <span class="text-xs text-indigo-400 font-mono" id="text-fields-count">0 champs détectés</span>
+          </div>
+          <div id="dynamic-texts-container" class="grid gap-4 max-h-[500px] overflow-y-auto pr-2">
+            <div class="text-center py-8 text-slate-500">
+              <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block"></i> Analyse du site en cours...
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Images Panel -->
+        <div id="dynamic-images-panel" class="space-y-4 pt-2 hidden">
+          <div class="flex justify-between items-center">
+            <h4 class="text-sm font-bold text-slate-300">Gestionnaire des Images du Site :</h4>
+            <span class="text-xs text-indigo-400 font-mono" id="image-fields-count">0 images détectées</span>
+          </div>
+          <div id="dynamic-images-container" class="grid md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2">
+            <div class="text-center py-8 text-slate-500 col-span-2">
+              <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block"></i> Analyse du site en cours...
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 7. Sécurité PIN -->
       <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 space-y-4">
         <h3 class="text-lg font-bold text-indigo-300 flex items-center gap-2">
@@ -1361,6 +1999,9 @@ function fileToBase64(file) {
     reader.onerror = error => reject(error);
   });
 }
+
+// Global reference to store dynamic CMS data
+let cmsData = {};
 
 document.addEventListener("DOMContentLoaded", function () {
   const pinForm = document.getElementById("pin-form");
@@ -1410,6 +2051,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (file) {
         const b64 = await fileToBase64(file);
         document.getElementById("cms-siteLogo").value = b64;
+        cmsData["siteLogo"] = b64;
         const prev = document.getElementById("logo-preview-img");
         if (prev) {
           prev.src = b64;
@@ -1427,6 +2069,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (file) {
         const b64 = await fileToBase64(file);
         document.getElementById("cms-heroImage").value = b64;
+        cmsData["heroImage"] = b64;
       }
     });
   }
@@ -1454,67 +2097,298 @@ document.addEventListener("DOMContentLoaded", function () {
       const statusEl = document.getElementById("seo-ping-status");
       if (statusEl) {
         statusEl.classList.remove("hidden");
-        statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Soumission de l\\\'indexation en cours auprès de Google...';
+        statusEl.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Soumission de l'indexation en cours auprès de Google...";
         
         setTimeout(() => {
-          statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> <strong>Demande d\\\'indexation transmise à Google avec succès !</strong><br>Sitemap et mots-clés (' + (document.getElementById("cms-metaKeywords").value || 'mots-clés') + ') enregistrés pour les robots Googlebot.';
+          statusEl.innerHTML = "<i class='fa-solid fa-circle-check'></i> <strong>Demande d'indexation transmise à Google avec succès !</strong><br>Sitemap et mots-clés (" + (document.getElementById("cms-metaKeywords").value || "mots-clés") + ") enregistrés pour les robots Googlebot.";
         }, 1200);
       }
     });
   }
 
+  // Dynamic Tabs switching inside Section 8
+  const tabTexts = document.getElementById("tab-texts");
+  const tabImages = document.getElementById("tab-images");
+  const panelTexts = document.getElementById("dynamic-texts-panel");
+  const panelImages = document.getElementById("dynamic-images-panel");
+
+  if (tabTexts && tabImages && panelTexts && panelImages) {
+    tabTexts.addEventListener("click", () => {
+      tabTexts.className = "px-4 py-2 text-sm font-semibold border-b-2 border-indigo-500 text-indigo-300 focus:outline-none";
+      tabImages.className = "px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 focus:outline-none";
+      panelTexts.classList.remove("hidden");
+      panelImages.classList.add("hidden");
+    });
+    tabImages.addEventListener("click", () => {
+      tabImages.className = "px-4 py-2 text-sm font-semibold border-b-2 border-indigo-500 text-indigo-300 focus:outline-none";
+      tabTexts.className = "px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 focus:outline-none";
+      panelImages.classList.remove("hidden");
+      panelTexts.classList.add("hidden");
+    });
+  }
+
   async function loadCmsFormValues() {
-    let cms = {};
+    cmsData = {};
     const local = localStorage.getItem("devwebia_site_cms");
     if (local) {
-      try { cms = JSON.parse(local); } catch(e){}
+      try { cmsData = JSON.parse(local); } catch(e){}
     }
     if (window.db) {
       try {
         const doc = await window.db.collection("app_data").doc("site_content").get();
         if (doc.exists) {
-          cms = { ...cms, ...doc.data() };
+          cmsData = { ...cmsData, ...doc.data() };
         }
       } catch(e) { console.warn("Firestore CMS load notice:", e); }
     }
 
-    if (cms.siteTitle && document.getElementById("cms-siteTitle")) document.getElementById("cms-siteTitle").value = cms.siteTitle;
-    if (cms.siteSlogan && document.getElementById("cms-siteSlogan")) document.getElementById("cms-siteSlogan").value = cms.siteSlogan;
-    if (cms.siteLogo && document.getElementById("cms-siteLogo")) {
-      document.getElementById("cms-siteLogo").value = cms.siteLogo;
+    if (cmsData.siteTitle && document.getElementById("cms-siteTitle")) document.getElementById("cms-siteTitle").value = cmsData.siteTitle;
+    if (cmsData.siteSlogan && document.getElementById("cms-siteSlogan")) document.getElementById("cms-siteSlogan").value = cmsData.siteSlogan;
+    if (cmsData.siteLogo && document.getElementById("cms-siteLogo")) {
+      document.getElementById("cms-siteLogo").value = cmsData.siteLogo;
       const prev = document.getElementById("logo-preview-img");
       if (prev) {
-        prev.src = cms.siteLogo;
+        prev.src = cmsData.siteLogo;
         document.getElementById("logo-preview").classList.remove("hidden");
       }
     }
-    if (cms.heroTitle && document.getElementById("cms-heroTitle")) document.getElementById("cms-heroTitle").value = cms.heroTitle;
-    if (cms.heroSubtitle && document.getElementById("cms-heroSubtitle")) document.getElementById("cms-heroSubtitle").value = cms.heroSubtitle;
-    if (cms.heroCta && document.getElementById("cms-heroCta")) document.getElementById("cms-heroCta").value = cms.heroCta;
-    if (cms.heroImage && document.getElementById("cms-heroImage")) document.getElementById("cms-heroImage").value = cms.heroImage;
-    if (cms.servicesTitle && document.getElementById("cms-servicesTitle")) document.getElementById("cms-servicesTitle").value = cms.servicesTitle;
-    if (cms.servicesSubtitle && document.getElementById("cms-servicesSubtitle")) document.getElementById("cms-servicesSubtitle").value = cms.servicesSubtitle;
-    if (cms.metaTitle && document.getElementById("cms-metaTitle")) {
-      document.getElementById("cms-metaTitle").value = cms.metaTitle;
+    if (cmsData.heroTitle && document.getElementById("cms-heroTitle")) document.getElementById("cms-heroTitle").value = cmsData.heroTitle;
+    if (cmsData.heroSubtitle && document.getElementById("cms-heroSubtitle")) document.getElementById("cms-heroSubtitle").value = cmsData.heroSubtitle;
+    if (cmsData.heroCta && document.getElementById("cms-heroCta")) document.getElementById("cms-heroCta").value = cmsData.heroCta;
+    if (cmsData.heroImage && document.getElementById("cms-heroImage")) document.getElementById("cms-heroImage").value = cmsData.heroImage;
+    if (cmsData.servicesTitle && document.getElementById("cms-servicesTitle")) document.getElementById("cms-servicesTitle").value = cmsData.servicesTitle;
+    if (cmsData.servicesSubtitle && document.getElementById("cms-servicesSubtitle")) document.getElementById("cms-servicesSubtitle").value = cmsData.servicesSubtitle;
+    if (cmsData.metaTitle && document.getElementById("cms-metaTitle")) {
+      document.getElementById("cms-metaTitle").value = cmsData.metaTitle;
       const p = document.getElementById("seo-preview-title");
-      if (p) p.textContent = cms.metaTitle;
+      if (p) p.textContent = cmsData.metaTitle;
     }
-    if (cms.metaKeywords && document.getElementById("cms-metaKeywords")) document.getElementById("cms-metaKeywords").value = cms.metaKeywords;
-    if (cms.metaDesc && document.getElementById("cms-metaDesc")) {
-      document.getElementById("cms-metaDesc").value = cms.metaDesc;
+    if (cmsData.metaKeywords && document.getElementById("cms-metaKeywords")) document.getElementById("cms-metaKeywords").value = cmsData.metaKeywords;
+    if (cmsData.metaDesc && document.getElementById("cms-metaDesc")) {
+      document.getElementById("cms-metaDesc").value = cmsData.metaDesc;
       const p = document.getElementById("seo-preview-desc");
-      if (p) p.textContent = cms.metaDesc;
+      if (p) p.textContent = cmsData.metaDesc;
     }
-    if (cms.pwaName && document.getElementById("cms-pwaName")) document.getElementById("cms-pwaName").value = cms.pwaName;
-    if (cms.pwaThemeColor && document.getElementById("cms-pwaThemeColor")) document.getElementById("cms-pwaThemeColor").value = cms.pwaThemeColor;
-    if (cms.whatsapp && document.getElementById("cms-whatsapp")) document.getElementById("cms-whatsapp").value = cms.whatsapp;
-    if (cms.footerText && document.getElementById("cms-footerText")) document.getElementById("cms-footerText").value = cms.footerText;
+    if (cmsData.pwaName && document.getElementById("cms-pwaName")) document.getElementById("cms-pwaName").value = cmsData.pwaName;
+    if (cmsData.pwaThemeColor && document.getElementById("cms-pwaThemeColor")) document.getElementById("cms-pwaThemeColor").value = cmsData.pwaThemeColor;
+    if (cmsData.whatsapp && document.getElementById("cms-whatsapp")) document.getElementById("cms-whatsapp").value = cmsData.whatsapp;
+    if (cmsData.footerText && document.getElementById("cms-footerText")) document.getElementById("cms-footerText").value = cmsData.footerText;
+
+    // Scan user's index.html and build the CMS form dynamically
+    await scanAndBuildDynamicCMS();
+  }
+
+  async function scanAndBuildDynamicCMS() {
+    try {
+      const response = await fetch("./index.html");
+      const htmlText = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, "text/html");
+
+      // 1. Text keys
+      const textKeys = new Set();
+      const textElements = [];
+      doc.querySelectorAll("[data-cms]").forEach(el => {
+        const key = el.getAttribute("data-cms");
+        const skipKeys = ["siteTitle", "siteSlogan", "siteLogo", "heroTitle", "heroSubtitle", "heroCta", "heroImage", "whatsapp", "footerText"];
+        if (key && !skipKeys.includes(key) && !textKeys.has(key)) {
+          textKeys.add(key);
+          const currentVal = cmsData[key] !== undefined ? cmsData[key] : el.textContent.trim();
+          
+          const sectionEl = el.closest("section") || el.closest("footer") || el.closest("header");
+          const sectionId = sectionEl ? (sectionEl.id || sectionEl.tagName) : "Contenu";
+          const sectionTitle = sectionEl ? (sectionEl.querySelector("h2, h3, h1")?.textContent.trim() || sectionId) : "Général";
+
+          textElements.push({
+            key,
+            currentVal,
+            section: sectionTitle,
+            isLong: currentVal.length > 80 || el.tagName === "P" || el.tagName === "TEXTAREA"
+          });
+        }
+      });
+
+      const textCountEl = document.getElementById("text-fields-count");
+      if (textCountEl) textCountEl.textContent = textElements.length + " champs trouvés";
+
+      const textsContainer = document.getElementById("dynamic-texts-container");
+      if (textsContainer) {
+        if (textElements.length === 0) {
+          textsContainer.innerHTML = \`<div class="text-center py-8 text-slate-500">Aucun autre champ de texte détecté dans index.html.</div>\`;
+        } else {
+          textsContainer.innerHTML = "";
+          const sections = {};
+          textElements.forEach(item => {
+            if (!sections[item.section]) sections[item.section] = [];
+            sections[item.section].push(item);
+          });
+
+          Object.keys(sections).forEach(sect => {
+            const header = document.createElement("div");
+            header.className = "text-xs font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-700/50 pb-1 mt-4 mb-2 flex items-center gap-1.5";
+            header.innerHTML = \`<i class="fa-solid fa-folder-open"></i> Section : \` + sect;
+            textsContainer.appendChild(header);
+
+            sections[sect].forEach(item => {
+              const div = document.createElement("div");
+              div.className = "bg-slate-800/40 p-4 rounded-xl border border-slate-700/30 hover:border-slate-700 transition space-y-1";
+              
+              const label = document.createElement("label");
+              label.className = "block text-xs font-semibold text-slate-300 flex justify-between items-center";
+              label.innerHTML = \`<span>\` + item.key + \`</span><span class="text-[10px] text-slate-500 font-mono">data-cms="\` + item.key + \`"</span>\`;
+              div.appendChild(label);
+
+              let input;
+              if (item.isLong) {
+                input = document.createElement("textarea");
+                input.rows = 3;
+              } else {
+                input = document.createElement("input");
+                input.type = "text";
+              }
+              input.id = "dyn-txt-" + item.key;
+              input.value = item.currentVal;
+              input.className = "w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500";
+              
+              input.addEventListener("input", () => {
+                cmsData[item.key] = input.value;
+              });
+
+              div.appendChild(input);
+              textsContainer.appendChild(div);
+            });
+          });
+        }
+      }
+
+      // 2. Image keys (data-cms-img & other standard images)
+      const imageKeys = new Set();
+      const imageElements = [];
+      doc.querySelectorAll("[data-cms-img]").forEach(el => {
+        const key = el.getAttribute("data-cms-img");
+        if (key && !imageKeys.has(key)) {
+          imageKeys.add(key);
+          const currentVal = cmsData[key] !== undefined ? cmsData[key] : (el.tagName === "IMG" ? el.getAttribute("src") : "");
+          imageElements.push({ key, currentVal });
+        }
+      });
+
+      doc.querySelectorAll("img").forEach((el, index) => {
+        const id = el.id;
+        const src = el.getAttribute("src");
+        if (src && !src.startsWith("data:") && !src.includes("spinner") && !src.includes("logo") && !id?.includes("preview")) {
+          let key = el.getAttribute("data-cms-img") || id;
+          if (!key) key = "img_" + index;
+          if (key && !imageKeys.has(key)) {
+            imageKeys.add(key);
+            const currentVal = cmsData[key] !== undefined ? cmsData[key] : src;
+            imageElements.push({ key, currentVal });
+          }
+        }
+      });
+
+      const imageCountEl = document.getElementById("image-fields-count");
+      if (imageCountEl) imageCountEl.textContent = imageElements.length + " images trouvées";
+
+      const imagesContainer = document.getElementById("dynamic-images-container");
+      if (imagesContainer) {
+        if (imageElements.length === 0) {
+          imagesContainer.innerHTML = \`<div class="text-center py-8 text-slate-500 col-span-2">Aucune autre image modifiable détectée dans index.html.</div>\`;
+        } else {
+          imagesContainer.innerHTML = "";
+          imageElements.forEach(item => {
+            const card = document.createElement("div");
+            card.className = "bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 flex flex-col justify-between space-y-4";
+
+            const header = document.createElement("div");
+            header.className = "flex justify-between items-center";
+            header.innerHTML = \`<span class="text-xs font-bold text-indigo-300 truncate max-w-[200px] font-mono">\` + item.key + \`</span>
+                                 <span class="text-[10px] text-slate-500 font-mono">image</span>\`;
+            card.appendChild(header);
+
+            const previewBox = document.createElement("div");
+            previewBox.className = "relative h-36 bg-slate-950 rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center p-2";
+            
+            const imgPreview = document.createElement("img");
+            imgPreview.id = "dyn-img-prev-" + item.key;
+            imgPreview.src = item.currentVal || "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400";
+            imgPreview.className = "max-h-full max-w-full object-contain rounded";
+            previewBox.appendChild(imgPreview);
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.type = "button";
+            deleteBtn.className = "absolute top-2 right-2 w-8 h-8 rounded-full bg-red-600/80 hover:bg-red-600 text-white flex items-center justify-center text-xs shadow-md transition";
+            deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            deleteBtn.title = "Supprimer / Remplacer par un espace vide";
+            deleteBtn.addEventListener("click", () => {
+              if (confirm("Supprimer l'image ?")) {
+                cmsData[item.key] = "";
+                imgPreview.src = "";
+                const inputUrl = document.getElementById("dyn-img-url-" + item.key);
+                if (inputUrl) inputUrl.value = "";
+              }
+            });
+            previewBox.appendChild(deleteBtn);
+            card.appendChild(previewBox);
+
+            const controls = document.createElement("div");
+            controls.className = "space-y-3";
+
+            const fileRow = document.createElement("div");
+            fileRow.className = "space-y-1";
+            fileRow.innerHTML = \`<label class="block text-[10px] uppercase font-bold text-slate-400">Téléverser un sary (image locale)</label>\`;
+            
+            const fileInput = document.createElement("input");
+            fileInput.type = "file";
+            fileInput.accept = "image/*";
+            fileInput.className = "w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer";
+            fileInput.addEventListener("change", async (e) => {
+              const file = e.target.files[0];
+              if (file) {
+                const b64 = await fileToBase64(file);
+                cmsData[item.key] = b64;
+                imgPreview.src = b64;
+                const inputUrl = document.getElementById("dyn-img-url-" + item.key);
+                if (inputUrl) inputUrl.value = b64;
+              }
+            });
+            fileRow.appendChild(fileInput);
+            controls.appendChild(fileRow);
+
+            const urlRow = document.createElement("div");
+            urlRow.className = "space-y-1";
+            urlRow.innerHTML = \`<label class="block text-[10px] uppercase font-bold text-slate-400">Ou coller l'adresse URL (Lien de l'image)</label>\`;
+            
+            const urlInput = document.createElement("input");
+            urlInput.type = "text";
+            urlInput.id = "dyn-img-url-" + item.key;
+            urlInput.placeholder = "https://images.unsplash.com/...";
+            urlInput.value = item.currentVal && !item.currentVal.startsWith("data:") ? item.currentVal : "";
+            urlInput.className = "w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500";
+            
+            urlInput.addEventListener("input", () => {
+              cmsData[item.key] = urlInput.value;
+              imgPreview.src = urlInput.value || "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400";
+            });
+            
+            urlRow.appendChild(urlInput);
+            controls.appendChild(urlRow);
+
+            card.appendChild(controls);
+            imagesContainer.appendChild(card);
+          });
+        }
+      }
+    } catch(e) {
+      console.warn("Scan dynamic CMS failure:", e);
+    }
   }
 
   if (cmsForm) {
     cmsForm.addEventListener("submit", async function (e) {
       e.preventDefault();
       const updatedData = {
+        ...cmsData,
         siteTitle: document.getElementById("cms-siteTitle").value,
         siteSlogan: document.getElementById("cms-siteSlogan").value,
         siteLogo: document.getElementById("cms-siteLogo").value,
@@ -1533,6 +2407,12 @@ document.addEventListener("DOMContentLoaded", function () {
         footerText: document.getElementById("cms-footerText").value,
         updatedAt: new Date().toISOString()
       };
+
+      // Ensure any inputs dynamically generated are up-to-date
+      document.querySelectorAll("[id^='dyn-txt-']").forEach(input => {
+        const key = input.id.replace("dyn-txt-", "");
+        updatedData[key] = input.value;
+      });
 
       // Save to localStorage
       localStorage.setItem("devwebia_site_cms", JSON.stringify(updatedData));

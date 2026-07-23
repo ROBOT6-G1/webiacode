@@ -341,7 +341,7 @@ function AiSettings() {
             </p>
             {!subActive && (
               <Button asChild className="mt-3" size="sm">
-                <Link to="/credits" search={{ plan: "ai" } as any}>
+                <Link to="/credits" search={{ plan: "ai" } as unknown as Record<string, string>}>
                   S'abonner (10 000 Ar / mois)
                 </Link>
               </Button>
