@@ -1538,7 +1538,7 @@ Sitemap: https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, "")}.mg/sitema
   }
 
   const payload = {
-    explanation: isMg
+    explanation: detectedLang === "mg"
       ? `Voatratra soa aman-tsara ny famoronana ny site web "${titleMatch}". Afaka ovainao amin'ny alalan'ny Espace Admin na amin'ny chat ny votoatiny.`
       : `Site Web "${titleMatch}" généré avec succès par l'IA DEVWEBIA. Vous pouvez maintenant personnaliser le site ou ajouter d'autres fonctionnalités.`,
     name: titleMatch,
