@@ -31,6 +31,10 @@ import {
   Shield,
   Plus,
   BrainCircuit,
+  ShieldAlert,
+  Smartphone,
+  MapPin,
+  Lock,
 } from "lucide-react";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -89,6 +93,54 @@ export function AppShell({ children }: { children: ReactNode }) {
     { title: "Parrainage", url: "/referrals" as const, icon: Users },
     { title: "Domaine", url: "/domain" as const, icon: Globe },
   ];
+
+  // Check if current user is suspended for multi-account violations
+  const isSuspended = profile.data?.status === "suspended" || profile.data?.is_suspended === true;
+
+  if (isSuspended) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-card border border-destructive/40 rounded-2xl p-6 shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto">
+            <ShieldAlert className="h-8 w-8" />
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
+              <Lock className="h-5 w-5 text-destructive" />
+              Compte Suspendu
+            </h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              {profile.data?.suspension_reason ||
+                "Un nouveau compte a été créé ou utilisé sur cet appareil. Votre ancien compte a été automatiquement suspendu pour empêcher le cumul abusif de crédits multi-comptes."}
+            </p>
+          </div>
+
+          <div className="bg-muted/50 p-4 rounded-xl text-left space-y-2 text-xs font-mono border border-border">
+            <p className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-1"><Smartphone className="h-3.5 w-3.5" /> Appareil :</span>
+              <span className="text-foreground font-semibold">{profile.data?.device_id || "Détecté"}</span>
+            </p>
+            {profile.data?.suspended_at && (
+              <p className="flex items-center justify-between text-muted-foreground">
+                <span>Date suspension :</span>
+                <span className="text-foreground">{new Date(profile.data.suspended_at).toLocaleString("fr-FR")}</span>
+              </p>
+            )}
+            <p className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Statut Sécurité :</span>
+              <span className="text-destructive font-semibold">Firebase Security Enforced</span>
+            </p>
+          </div>
+
+          <Button variant="destructive" className="w-full font-bold" onClick={signOut}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Se Déconnecter
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>

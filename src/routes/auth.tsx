@@ -11,7 +11,8 @@ import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc, increment } from "firebase/firestore";
+import { enforceDeviceSecurity } from "@/lib/security";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
 
@@ -45,15 +46,77 @@ function AuthPage() {
     const profRef = doc(db, "profiles", uid);
     const snap = await getDoc(profRef);
     if (!snap.exists()) {
+      const myReferralCode = `REF-${uid.slice(0, 6).toUpperCase()}`;
+      let referredByCode = search.ref || "";
+
+      // Handle referral bonus if valid referral code present
+      if (referredByCode) {
+        try {
+          // Find referrer profile by referral_code or id
+          let referrerId = "";
+          const refQuery = query(collection(db, "profiles"), where("referral_code", "==", referredByCode));
+          const refSnap = await getDocs(refQuery);
+          if (!refSnap.empty) {
+            referrerId = refSnap.docs[0].id;
+          } else {
+            const directDoc = await getDoc(doc(db, "profiles", referredByCode));
+            if (directDoc.exists()) referrerId = directDoc.id;
+          }
+
+          if (referrerId && referrerId !== uid) {
+            // Check how many referrals the referrer already has
+            const existingRefsQuery = query(collection(db, "referrals"), where("referrer_id", "==", referrerId));
+            const existingRefsSnap = await getDocs(existingRefsQuery);
+            const existingCount = existingRefsSnap.size;
+
+            const canGetBonus = existingCount < 10;
+            if (canGetBonus) {
+              // Add 5 credits bonus to referrer
+              await updateDoc(doc(db, "profiles", referrerId), {
+                credits: increment(5),
+              });
+              await addDoc(collection(db, "referrals"), {
+                referrer_id: referrerId,
+                referred_user_id: uid,
+                referred_email: userEmail,
+                bonus_granted: true,
+                bonus_credits: 5,
+                created_at: new Date().toISOString(),
+              });
+            } else {
+              // Limit reached (>10 referrals), no bonus granted
+              await addDoc(collection(db, "referrals"), {
+                referrer_id: referrerId,
+                referred_user_id: uid,
+                referred_email: userEmail,
+                bonus_granted: false,
+                bonus_credits: 0,
+                note: "Limite de 10 parrainages rémunérés atteinte",
+                created_at: new Date().toISOString(),
+              });
+            }
+          }
+        } catch (err) {
+          console.warn("Referral processing notice:", err);
+        }
+      }
+
       await setDoc(profRef, {
         id: uid,
         email: userEmail,
         display_name: displayName || name || userEmail.split("@")[0],
         credits: 5,
         plan: "free",
-        referral_code: search.ref || "",
+        referral_code: myReferralCode,
+        referred_by: referredByCode,
         created_at: new Date().toISOString(),
       });
+    }
+
+    // Run security anti-multi-account check
+    const secResult = await enforceDeviceSecurity(uid, userEmail);
+    if (secResult.isSuspended) {
+      toast.error("🔒 " + (secResult.reason || "Ce compte est suspendu."));
     }
   };
 

@@ -1,6 +1,6 @@
 {
   "name": "Kind Logic Kreator",
   "description": "App imported from GitHub repository ROBOT6-G1/kind-logic-kreator",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

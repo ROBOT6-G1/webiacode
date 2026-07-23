@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Shield, Check, X, Key, Users as UsersIcon, MessageSquare } from "lucide-react";
+import { Shield, Check, X, Key, Users as UsersIcon, MessageSquare, ShieldAlert, Smartphone, MapPin, Lock, Unlock, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -34,11 +34,13 @@ function Admin() {
         <TabsList>
           <TabsTrigger value="payments">Paiements</TabsTrigger>
           <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+          <TabsTrigger value="security">Sécurité & Anti-Fraude</TabsTrigger>
           <TabsTrigger value="keys">Clés IA</TabsTrigger>
           <TabsTrigger value="tickets">Support</TabsTrigger>
         </TabsList>
         <TabsContent value="payments"><PaymentsTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
+        <TabsContent value="security"><SecurityTab /></TabsContent>
         <TabsContent value="keys"><KeysTab /></TabsContent>
         <TabsContent value="tickets"><TicketsTab /></TabsContent>
       </Tabs>
@@ -111,34 +113,235 @@ function UsersTab() {
         credits: number;
         plan?: string;
         created_at?: string;
+        status?: string;
+        is_suspended?: boolean;
+        suspension_reason?: string;
+        device_id?: string;
+        last_location?: { latitude?: number; longitude?: number; status?: string };
+        device_info?: { platform?: string; userAgent?: string };
       }>;
       list.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
       return list;
     },
   });
+
   const setCredits = async (id: string, credits: number) => {
     try {
       await updateDoc(doc(db, "profiles", id), { credits });
-      toast.success("MàJ réussie");
+      toast.success("Crédits mis à jour");
       queryClient.invalidateQueries();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erreur");
     }
   };
+
+  const toggleSuspension = async (id: string, currentlySuspended: boolean) => {
+    try {
+      await updateDoc(doc(db, "profiles", id), {
+        status: currentlySuspended ? "active" : "suspended",
+        is_suspended: !currentlySuspended,
+        suspension_reason: currentlySuspended ? "" : "Suspendu manuellement par l'administrateur.",
+      });
+      toast.success(currentlySuspended ? "Compte réactivé" : "Compte suspendu");
+      queryClient.invalidateQueries();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur");
+    }
+  };
+
   return (
-    <div className="space-y-2 mt-4">
-      {q.data?.map((u) => (
-        <div key={u.id} className="rounded-lg border border-border bg-card p-3 flex items-center justify-between gap-4 text-sm">
-          <div className="min-w-0">
-            <p className="font-semibold flex items-center gap-2 truncate"><UsersIcon className="h-4 w-4" />{u.display_name ?? u.email}</p>
-            <p className="text-xs text-muted-foreground truncate">{u.email} · Plan {u.plan || "free"}</p>
+    <div className="space-y-3 mt-4">
+      {q.data?.map((u) => {
+        const isSuspended = u.status === "suspended" || u.is_suspended === true;
+        return (
+          <div key={u.id} className="rounded-xl border border-border bg-card p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-sm shadow-sm">
+            <div className="space-y-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold flex items-center gap-1.5"><UsersIcon className="h-4 w-4 text-primary" />{u.display_name ?? u.email}</span>
+                {isSuspended ? (
+                  <span className="text-xs bg-destructive/10 text-destructive border border-destructive/20 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Lock className="h-3 w-3" /> Suspendu
+                  </span>
+                ) : (
+                  <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold px-2 py-0.5 rounded-full">
+                    Actif
+                  </span>
+                )}
+                {u.plan === "pro" && <span className="text-xs bg-accent/20 text-accent border border-accent/40 font-bold px-2 py-0.5 rounded-full">PRO</span>}
+              </div>
+
+              <p className="text-xs text-muted-foreground truncate">{u.email} · ID: <span className="font-mono">{u.id}</span></p>
+
+              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1">
+                {u.device_id && (
+                  <span className="flex items-center gap-1"><Smartphone className="h-3 w-3" /> Appareil : <strong className="font-mono">{u.device_id}</strong></span>
+                )}
+                {u.last_location?.latitude && (
+                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-emerald-500" /> Pos : {u.last_location.latitude.toFixed(4)}, {u.last_location.longitude?.toFixed(4)}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-border">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  defaultValue={u.credits}
+                  className="w-20 h-9"
+                  onBlur={(e) => {
+                    const v = parseInt(e.target.value);
+                    if (!isNaN(v) && v !== u.credits) setCredits(u.id, v);
+                  }}
+                />
+                <span className="text-xs text-muted-foreground">crédits</span>
+              </div>
+
+              <Button
+                size="sm"
+                variant={isSuspended ? "outline" : "destructive"}
+                onClick={() => toggleSuspension(u.id, isSuspended)}
+                className="font-semibold"
+              >
+                {isSuspended ? (
+                  <>
+                    <Unlock className="h-3.5 w-3.5 mr-1.5" />
+                    Réactiver
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-3.5 w-3.5 mr-1.5" />
+                    Suspendre
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Input type="number" defaultValue={u.credits} className="w-24" onBlur={(e) => { const v = parseInt(e.target.value); if (!isNaN(v) && v !== u.credits) setCredits(u.id, v); }} />
-            <span className="text-xs text-muted-foreground">crédits</span>
-          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SecurityTab() {
+  const logsQuery = useQuery({
+    queryKey: ["admin-security-logs"],
+    queryFn: async () => {
+      const snap = await getDocs(collection(db, "security_logs"));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Array<{
+        id: string;
+        event: string;
+        device_id: string;
+        active_user_id: string;
+        active_user_email: string;
+        suspended_user_id?: string;
+        suspended_user_email?: string;
+        location?: { latitude?: number; longitude?: number; status?: string };
+        device_info?: { platform?: string; userAgent?: string; screenResolution?: string };
+        created_at: string;
+      }>;
+      list.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+      return list;
+    },
+  });
+
+  const devicesQuery = useQuery({
+    queryKey: ["admin-devices"],
+    queryFn: async () => {
+      const snap = await getDocs(collection(db, "devices"));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Array<{
+        id: string;
+        device_id: string;
+        active_user_email?: string;
+        all_user_ids?: string[];
+        last_location?: { latitude?: number; longitude?: number; status?: string };
+        device_info?: { platform?: string; userAgent?: string; screenResolution?: string };
+        updated_at?: string;
+      }>;
+      list.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""));
+      return list;
+    },
+  });
+
+  return (
+    <div className="space-y-6 mt-4">
+      {/* Overview Cards */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-1">
+          <p className="text-xs font-bold text-destructive uppercase tracking-wider flex items-center gap-1.5">
+            <ShieldAlert className="h-4 w-4" />
+            Incidents Multi-Comptes Détectés
+          </p>
+          <p className="text-3xl font-extrabold">{logsQuery.data?.length ?? 0}</p>
+          <p className="text-xs text-muted-foreground">Comptes antérieurs automatiquement suspendus sur le même appareil</p>
         </div>
-      ))}
+
+        <div className="p-4 rounded-xl border border-border bg-card space-y-1">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <Smartphone className="h-4 w-4 text-primary" />
+            Appareils Uniques Enregistrés
+          </p>
+          <p className="text-3xl font-extrabold">{devicesQuery.data?.length ?? 0}</p>
+          <p className="text-xs text-muted-foreground">Empreintes d'appareils suivies par Firebase</p>
+        </div>
+      </div>
+
+      {/* Incident Audit Log */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-bold flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-amber-500" />
+          Journal d'Audit des Suspensions Automatiques ({logsQuery.data?.length ?? 0})
+        </h3>
+
+        {(!logsQuery.data || logsQuery.data.length === 0) ? (
+          <div className="p-6 text-center border border-dashed border-border rounded-xl text-muted-foreground text-sm">
+            Aucun incident de multi-compte enregistré pour le moment.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {logsQuery.data.map((log) => (
+              <div key={log.id} className="p-4 rounded-xl border border-border bg-card space-y-2 text-sm shadow-sm">
+                <div className="flex justify-between items-start gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-destructive/10 text-destructive text-xs font-bold px-2.5 py-1 rounded-full border border-destructive/20 flex items-center gap-1">
+                      <Lock className="h-3 w-3" /> Multi-compte Bloqué
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">ID Appareil : {log.device_id}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {log.created_at ? new Date(log.created_at).toLocaleString("fr-FR") : ""}
+                  </span>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-2 text-xs pt-1 border-t border-border/50">
+                  <div className="p-2 bg-muted/40 rounded-lg">
+                    <p className="font-bold text-emerald-500 mb-0.5">Compte Actif Conservé :</p>
+                    <p className="font-mono text-foreground">{log.active_user_email}</p>
+                  </div>
+                  <div className="p-2 bg-destructive/10 rounded-lg border border-destructive/20">
+                    <p className="font-bold text-destructive mb-0.5">Ancien Compte Suspendu :</p>
+                    <p className="font-mono text-foreground">{log.suspended_user_email || log.suspended_user_id}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
+                  {log.location?.latitude && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 text-primary" />
+                      Géolocalisation : {log.location.latitude.toFixed(4)}, {log.location.longitude?.toFixed(4)}
+                    </span>
+                  )}
+                  {log.device_info?.platform && (
+                    <span className="flex items-center gap-1">
+                      <Smartphone className="h-3.5 w-3.5" />
+                      {log.device_info.platform} ({log.device_info.screenResolution})
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

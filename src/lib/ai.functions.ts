@@ -64,12 +64,21 @@ function buildSystemPrompt(
   hasExistingFiles: boolean,
   userPlan: "free" | "pro"
 ): string {
-  const pwaBlock = pwaEnabled
-    ? `\nMODE PWA ACTIVÉ (obligatoire) — le site DOIT être installable :
-- Génère \`manifest.webmanifest\` complet.
-- Génère \`sw.js\` service worker.
-- Dans script.js, enregistre le service worker.`
-    : `\nMODE PWA DÉSACTIVÉ — ne génère PAS de manifest.webmanifest, PAS de sw.js.`;
+  const pwaBlock = `\nAPPLICATION PWA AUTOMATIQUE & LOGO AI (OBLIGATOIRE POUR CHAT & NOUVEAUX SITES) :
+- TOUT site généré DOIT être une Application Web Progressive (PWA) 100% installable sur mobile et ordinateur.
+- L'IA DOIT GÉNÉRER AUTOMATIQUEMENT UN LOGO / ICÔNE PWA DESIGN :
+  - Crée un fichier \`icon.svg\` ou génère une image SVG/Canvas vectorielle magnifique et moderne adaptée à la marque (ex: un symbole graphique élégant avec des dégradés vibrants et l'initiale de la marque).
+- FICHIERS ET INTÉGRATION PWA ASSURÉS PAR L'IA :
+  1. \`manifest.webmanifest\` : Contient \`name\`, \`short_name\`, \`start_url\` ("./index.html"), \`display\` ("standalone"), \`background_color\`, \`theme_color\`, et la référence à l'icône SVG/Base64.
+  2. \`sw.js\` : Service Worker complet assurant la mise en cache (CacheFirst/NetworkFirst) des ressources (index.html, script.js, firebase.js, styles) pour le fonctionnement HORS-LIGNE (Offline).
+  3. Dans \`index.html\` : Inclure les balises \`<link rel="manifest" href="manifest.webmanifest">\`, \`<meta name="theme-color" content="...">\`, et balises d'icône Apple iOS (\`apple-touch-icon\`).
+  4. Dans \`script.js\` : Enregistrer le Service Worker (\`navigator.serviceWorker.register('./sw.js')\`) et capter l'événement \`beforeinstallprompt\` pour afficher un bouton d'installation PWA interactif sur le site public ("📱 Installer l'Application").
+- GESTION DU LOGO ET PARAMÈTRES PWA DANS L'ESPACE ADMIN (\`admin.html\` & \`admin.js\`) :
+  - L'IA DOIT inclure dans l'interface \`admin.html\` un panneau dédié "📱 Configuration PWA & Logo" :
+    - Champ Nom de l'application & Nom court d'écran d'accueil
+    - Sélecteur de couleur de thème PWA (Theme Color)
+    - Option de remplacement du Logo/Icône PWA (Upload d'image locale convertie en Base64 ou lien SVG/PNG)
+    - Bouton de sauvegarde synchronisant immédiatement les modifications dans Firestore (\`app_data\` -> \`site_content\`) et réactualisant le manifest dynamiquement.`;
 
   const clarificationBlock = hasExistingFiles
     ? `\nCONTEXTE : Le site existe déjà. Applique directement la modification et renvoie TOUS les fichiers (site + admin). Ne pose PAS de questions.`
@@ -104,6 +113,31 @@ function buildSystemPrompt(
 2. CODE PIN & AUTHENTIFICATION : Ne JAMAIS coder le Code PIN Admin en clair en dur. Le PIN doit être vérifié avec un HASH SHA-256 ou dans Firestore.
 3. VIE PRIVÉE ET DONNÉES UTILISATEURS : Les commandes, messages de contact et informations clients sont STRICTEMENT CONFIDENTIELLES et enregistrées dans des collections Firestore privées.`;
 
+  const domainBlock = `\nINSTRUCTIONS STRICTES DOMAINE PERSONNALISÉ & CONFIGURATION DNS (OBLIGATOIRE SI DEMANDÉ) :
+- Si le client fait référence à un nom de domaine (ex: boutique.mg, monentreprise.com) ou indique en posséder un :
+  1. L'IA DOIT obligatoirement inclure dans \`admin.html\` une section dédiée "Configuration Domaine & DNS".
+  2. Expliquer clairement au propriétaire comment faire pointer son domaine vers son site DEVWEBIA :
+     - Enregistrement A (Domaine racine @) -> Pointant vers l'IP Vercel \`76.76.21.21\`
+     - Enregistrement CNAME (Sous-domaine www) -> Pointant vers \`cname.vercel-dns.com\`
+  3. Confirmer que la liaison Vercel et le certificat SSL HTTPS sont pris en charge automatiquement.`;
+
+  const seoBlock = `\nAUTO-SEO & INDEXATION GOOGLE AUTOMATIQUE (OBLIGATOIRE POUR TOUT SITE) :
+- TOUT site généré DOIT être optimisé pour les moteurs de recherche (SEO Google) :
+  1. DANS \`index.html\` :
+     - Balise \`<title>\` pertinente et dynamique.
+     - Balises \`<meta name="description" content="...">\` et \`<meta name="keywords" content="...">\`.
+     - Open Graph complet : \`og:title\`, \`og:description\`, \`og:image\`, \`og:url\`, \`og:type="website"\`.
+     - Twitter Cards : \`twitter:card\`, \`twitter:title\`, \`twitter:description\`, \`twitter:image\`.
+     - Données structurées JSON-LD (Schema.org / Organization / LocalBusiness / WebSite) pour apparition directe dans les résultats Google.
+  2. FICHIERS SITEMAP ET ROBOTS :
+     - Génère \`sitemap.xml\` avec les pages et \`lastmod\`.
+     - Génère \`robots.txt\` autorisant Googlebot / Bingbot et pointant vers le \`sitemap.xml\`.
+  3. PANNEAU ADMIN \`admin.html\` & \`admin.js\` :
+     - L'IA DOIT inclure une section "🔍 AUTO-SEO & Indexation Google" :
+       - Champs pour éditer Méta-Titre, Méta-Description, Méta-Mots-Clés, URL Canonique.
+       - Aperçu du snippet Google en direct (Simulateur de résultat de recherche Google).
+       - Bouton "🚀 Lancer la demande d'indexation Google (Google Ping)" dans \`admin.js\` qui envoie la notification automatique aux serveurs Google (\`https://www.google.com/ping?sitemap=...\`) et actualise les méta-données dans Firestore.`;
+
   const badgeBlock =
     userPlan === "free"
       ? `\nBADGE DEVWEBIA — OBLIGATOIRE (plan gratuit) :
@@ -127,9 +161,11 @@ Réponds TOUJOURS en JSON strict entouré de <JSON>…</JSON> :
 - Utilise Tailwind CSS v4 (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>).
 ${clarificationBlock}
 ${adminBlock}
+${domainBlock}
 ${badgeBlock}
 ${siteTypeBlock(siteType, whatsapp)}
 ${pwaBlock}
+${seoBlock}
 ${userFirebaseSnippet}`;
 }
 
