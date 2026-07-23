@@ -32,34 +32,87 @@ type GeneratedSite = {
 function siteTypeBlock(siteType: SiteType, whatsapp: string | null): string {
   if (siteType === "vitrine") {
     return `\nTYPE DE SITE : VITRINE (site de présentation d'entreprise / service).
-- Sections attendues : hero puissant, à-propos, services / offres, galerie ou preuves sociales, témoignages, appel à l'action, contact.
-- Pas de panier, pas de checkout. Un formulaire de contact simple est acceptable.`;
+- Les 10 sections obligatoires à inclure impérativement sur le site public (index.html) :
+  1. Hero / Accueil : Présentation percutante avec titre accrocheur, sous-titre et bouton d'action.
+  2. À propos de l'entreprise : Histoire, valeurs, vision et textes de présentation de l'entreprise.
+  3. Nos Services : Liste complète et détaillée des services et offres de l'entreprise.
+  4. Pourquoi nous choisir : Atouts, garanties, chiffres clés ou statistiques prouvant l'excellence.
+  5. Réalisations / Portfolio : Grille ou carrousel moderne présentant les derniers projets ou réalisations.
+  6. Témoignages clients : Avis authentiques avec étoiles, nom du client et photo/avatar.
+  7. Équipe : Présentation des membres clés de l'équipe avec leur rôle et leur photo.
+  8. FAQ : Foire aux questions avec un système d'accordéon interactif en JavaScript.
+  9. Blog / Actualités : Articles ou nouveautés de l'entreprise avec date et catégorie.
+  10. Contact (Carte + Formulaire) : Formulaire de contact opérationnel, carte interactive (iframe ou mock propre) et coordonnées complètes (Email, WhatsApp, Téléphone, Adresse).
+- Pas de panier, pas de checkout. Un formulaire de contact simple est requis.`;
   }
   if (siteType === "portfolio") {
     return `\nTYPE DE SITE : PORTFOLIO (mise en valeur du travail d'un créatif / freelance).
-- Sections attendues : hero avec identité forte, biographie courte, grille / carousel de projets, compétences, contact.
-- Mets en avant l'esthétique, la typographie et les images. Aucune fonctionnalité e-commerce.`;
+- Les 10 sections obligatoires à inclure impérativement sur le site public (index.html) :
+  1. Hero / Présentation : Salutation personnalisée, titre fort sur votre métier/spécialité, et bouton CTA.
+  2. À propos : Biographie, parcours professionnel, et philosophie de travail.
+  3. Mes Services : Les prestations proposées avec détails et tarifs indicatifs.
+  4. Mes Compétences : Liste visuelle de vos hard & soft skills avec barres de progression ou badges stylisés.
+  5. Portfolio / Réalisations : Galerie de projets triables par catégorie avec images, titres et descriptions.
+  6. Études de cas : Explication détaillée de projets majeurs (problème, solution apportée, résultats obtenus).
+  7. Témoignages : Avis de clients ou de collègues sur vos collaborations.
+  8. Tarifs / Offres : Forfaits ou formules d'accompagnement proposées pour vos services.
+  9. FAQ : Réponses aux questions fréquentes des prospects (délais, processus, tarifs).
+  10. Contact / Réservation : Formulaire de prise de contact ou de réservation directe d'appel/session.`;
   }
   if (siteType === "hotel") {
-    return `\nTYPE DE SITE : HOTEL MANAGEMENT SYSTEM (site + back-office de gestion hôtelière).
-- Public : hero avec réservation, présentation des chambres/suites, équipements, restaurant/spa, avis, contact.
-- Formulaire de réservation et calendrier d'occupation via Firebase Firestore (collection \`app_data\`).
-- Admin : gestion chambres, réservations, factures, clients.`;
+    return `\nTYPE DE SITE : HOTEL / RESTAURANTS (site + back-office complet).
+- Les 10 sections obligatoires à inclure impérativement sur le site public (index.html) :
+  1. Hero : Visuels somptueux de l'établissement, slogan invitant, et barre de recherche rapide de disponibilité.
+  2. À propos : Histoire de l'établissement, atmosphère unique, et valeurs de service.
+  3. Chambres / Menu : Grille présentant les suites/chambres disponibles ou les menus gastronomiques phares de l'établissement.
+  4. Services : Équipements de l'hôtel ou prestations (Spa, Piscine, Navette, Wifi gratuit, Parking, Petit-déjeuner).
+  5. Galerie photos : Galerie d'images en haute résolution montrant l'établissement sous toutes ses coutures.
+  6. Tarifs : Grille tarifaire claire par catégorie de chambre ou formules spéciales de repas.
+  7. Réservation : Formulaire de réservation directe en ligne avec dates d'arrivée, de départ et sélection de l'offre.
+  8. Avis clients : Notes, avis détaillés et commentaires des voyageurs/clients.
+  9. FAQ : Réponses aux questions récurrentes (Horaires d'arrivée/départ, animaux, conditions d'annulation).
+  10. Contact + Carte : Localisation sur carte, adresse exacte, e-mail, téléphone et bouton de redirection directe.`;
   }
   if (siteType === "school") {
-    return `\nTYPE DE SITE : SCHOOL MANAGEMENT SYSTEM (site école + back-office scolaire).
-- Public : hero, présentation de l'école, classes, professeurs, actualités, contact, formulaire d'inscription.
-- Admin : gestion élèves, enseignants, classes, matières, emplois du temps, notes, paiements via Firestore (\`app_data\`).`;
+    return `\nTYPE DE SITE : ÉCOLE / FORMATION (site école + back-office scolaire).
+- Les 10 sections obligatoires à inclure impérativement sur le site public (index.html) :
+  1. Hero : Message de bienvenue inspirant, slogan éducatif et boutons d'inscription / découverte.
+  2. Présentation : Histoire de l'établissement, mot de la direction, mission et valeurs académiques.
+  3. Formations / Cours : Catalogue complet des cours, filières, classes ou formations proposées.
+  4. Enseignants : Présentation de l'équipe pédagogique avec leurs photos, diplômes et matières enseignées.
+  5. Programmes : Détail des programmes scolaires, activités parascolaires et calendrier des cours.
+  6. Tarifs : Grille de frais de scolarité ou coûts des formations avec facilités de paiement.
+  7. Témoignages : Avis de parents d'élèves, d'étudiants actuels ou d'anciens diplômés.
+  8. FAQ : Réponses aux questions (Critères d'admission, rentrée, bourses, uniformes).
+  9. Inscription : Formulaire de demande d'admission ou d'inscription en ligne complet.
+  10. Contact : Coordonnées complètes de l'établissement, secrétaire académique, horaires d'ouverture et plan d'accès.`;
   }
   if (siteType === "erp") {
-    return `\nTYPE DE SITE : ERP BUSINESS MANAGEMENT SYSTEM (progiciel de gestion intégré).
-- Admin : Dashboard KPIs, Ventes (devis/factures PDF), Achats, Stock, Clients/Fournisseurs, Comptabilité, RH.
-- Données stockées dans Firestore (\`app_data\`).`;
+    return `\nTYPE DE SITE : ORGANISATION / ASSOCIATION (site de présentation + collecte + back-office).
+- Les 10 sections obligatoires à inclure impérativement sur le site public (index.html) :
+  1. Hero : Titre percutant décrivant la cause soutenue, slogans mobilisateurs et bouton d'action "Faire un don" ou "Nous rejoindre".
+  2. À propos : Origine, histoire et valeurs de l'association ou de l'organisation.
+  3. Notre Mission : Les objectifs globaux de la structure et l'impact recherché auprès de la communauté.
+  4. Nos Activités : Description des actions menées sur le terrain, projets en cours et réussites passées.
+  5. Événements : Calendrier des futurs rassemblements, webinaires, collectes, campagnes ou journées d'action.
+  6. Équipe : Trombinoscope et biographie rapide des membres fondateurs, du bureau et des bénévoles clés.
+  7. Partenaires : Logos des entreprises, sponsors ou autres ONGs partenaires soutenant la structure.
+  8. Galerie : Photos des projets réalisés, distributions de dons, ou réunions de terrain.
+  9. Faire un don / Adhérer : Formulaire en ligne interactif ou instructions pour faire un don / adhérer à l'association.
+  10. Contact : Coordonnées, formulaires de bénévolat, réseaux sociaux et adresse de contact principal.`;
   }
   return `\nTYPE DE SITE : E-COMMERCE (boutique en ligne complète).
-- Sections : hero, grille produits, panier, checkout.
-- Commandes envoyées via WhatsApp au numéro ${whatsapp || "+261 34 00 000 00"}.
-- Produits et commandes sauvegardés dans Firebase Firestore (\`app_data\`).`;
+- Les 10 sections obligatoires à inclure impérativement sur le site public (index.html) :
+  1. Hero / Promotions : Visuel d'impact, slogan accrocheur et bannières promotionnelles avec bouton "Acheter maintenant".
+  2. Catégories : Liste illustrée des catégories de produits proposées pour faciliter la recherche.
+  3. Produits populaires : Grille moderne des articles phares les plus demandés avec boutons d'ajout rapide au panier.
+  4. Nouveautés : Section dédiée aux tout derniers arrivages du magasin ou de l'artisanat.
+  5. Meilleures ventes : Les produits incontournables recommandés par la boutique.
+  6. Avis clients : Commentaires réels d'acheteurs sur la qualité des produits et du service de livraison.
+  7. Offres spéciales : Réductions temporaires, ventes flash ou codes de parrainage exclusifs.
+  8. FAQ : Foire aux questions logistiques (Modes de paiement, délais de livraison, retours et remboursements).
+  9. Blog : Conseils d'utilisation des produits ou articles connexes pour asseoir l'expertise de la marque.
+  10. Contact / Support : Formulaire de réclamation ou service après-vente, numéro WhatsApp de support en ligne et email.`;
 }
 
 function buildSystemPrompt(
@@ -151,24 +204,32 @@ function buildSystemPrompt(
 - VARIÉTÉ DE DESIGN & STYLES : L'IA doit varier les modèles de design UI (Glassmorphism, Dark Luxe, Minimalist Modern, Neo-Brutalist, Light Corporate) en fonction du domaine d'activité.
 - Tout ce contenu rédigé par l'IA doit être dynamiquement éditable dans l'Espace Admin (\`admin.html\` / \`admin.js\`) et synchronisé avec Firestore (\`app_data\` -> \`site_content\`).`;
 
-  const richSectionsAndReadMoreBlock = `\n10 SECTIONS MINIMUM & BOUTON VOIR PLUS & AJOUT DE SECTIONS PERSONNALISÉES (EXIGENCE MAJEURE) :
-1. **10 SECTIONS MINIMUM SUR LE SITE PUBLIC (\`index.html\`)** :
-   Le site web généré DOIT impérativement comporter au moins 10 sections riches, espacées et esthétiques pour être complet et professionnel :
-   - Section 1 : Barre de navigation supérieure (Navbar) avec logo, liens et boutons d'action.
-   - Section 2 : Carrousel / Multi-Hero d'accueil dynamique avec titre, sous-titre et image de fond.
-   - Section 3 : Section À propos / Présentation de l'entreprise ou du projet.
-   - Section 4 : Grille des Produits / Services / Offres phares avec prix et détails.
-   - Section 5 : Statistiques et Chiffres clés animés (ex: clients satisfaits, projets réalisés).
-   - Section 6 : Galerie photos ou Réalisations en grille moderne.
-   - Section 7 : Témoignages et Avis clients avec étoiles.
-   - Section 8 : FAQ (Foire aux questions) avec accordéon interactif.
-   - Section 9 : Section Contact / Formulaire / Bouton de commande WhatsApp direct.
-   - Section 10 : Pied de page (Footer) complet avec liens rapides, newsletter et mentions légales.
+  const richSectionsAndReadMoreBlock = `\n10 SECTIONS OBLIGATOIRES, ÉDITION CMS INTÉGRALE & COMPOSANT MULTI-IMAGES AVEC BOUTONS D'ACTION (EXIGENCE MAJEURE & CRITIQUE) :
 
-2. **BOUTON "VOIR PLUS" / "LIRE LA SUITE" SUR LES PARAGRAPHES LONGS** :
-   - Pour tout paragraphe long ou texte descriptif (biographie, descriptions de services, articles), l'IA doit intégrer un bouton interactif "Voir plus" / "Lire la suite" (expand/collapse) en JavaScript pour éviter d'encombrer l'interface tout en permettant de lire l'intégralité du texte en un clic.
+1. **10 SECTIONS PUBLIC OBLIGATOIRES (\`index.html\`)** :
+   - Le site généré DOIT impérativement comporter au moins 10 sections distinctes, riches, espacées et haut de gamme correspondant EXACTEMENT aux 10 sections du type de site choisi (voir la section "TYPE DE SITE" ci-dessous).
 
-3. **GÉNÉRATEUR DE SECTIONS PERSONNALISÉES ("AJOUTER UNE SECTION VAOVAO") DANS L'ADMIN** :
+2. **ÉDITION INTÉGRALE VIA L'ADMINISTRATION (\`admin.html\` & \`admin.js\`)** :
+   - L'espace administrateur DOIT permettre de modifier absolument TOUTES les 10 sections publiques du site (titres, textes, images de fond, styles).
+   - Les modifications doivent être enregistrées en temps réel dans Firebase Firestore (collection \`app_data\`, document \`site_content\`) et appliquées dynamiquement sur le site public via la fonction \`loadSiteContent()\` dans \`script.js\`.
+
+3. **GALERIES MULTI-IMAGES AVEC BOUTONS DE CONTACT / ACTION INDIVIDUELS (EXIGENCE ABSOLUE)** :
+   - Dans CHAQUE section de l'administration, l'administrateur doit pouvoir ajouter, modifier et supprimer un nombre illimité d'éléments contenant une image.
+   - Chaque élément inséré par l'admin dans une section DOIT obligatoirement contenir :
+     1. Un bouton de téléversement d'image (Image locale convertie en Base64 ou lien URL d'image).
+     2. Un titre de l'image (titre de l'élément / produit / service / chambre / enseignant / projet).
+     3. Une description textuelle détaillée de cet élément.
+     4. Un champ de contact / lien d'action (Numéro de téléphone / WhatsApp, adresse email, ou URL de lien externe).
+   - Sur le site public (\`index.html\` / \`script.js\`), ces éléments multi-images doivent être présentés sous forme de cartes d'illustration, de grille moderne ou de carrousel de cartes.
+   - **SOUS CHAQUE IMAGE, UN BOUTON DE CONTACT / ACTION INDIVIDUEL EST STRICTEMENT OBLIGATOIRE** : Le contact/lien saisi par l'admin (WhatsApp, e-mail ou lien URL) doit s'afficher sous la forme d'un magnifique bouton interactif juste sous l'image de la carte. Au clic, ce bouton doit :
+     - Si c'est un numéro WhatsApp/téléphone : Ouvrir une discussion WhatsApp (\`https://wa.me/...\` avec un texte personnalisé) ou appeler le numéro.
+     - Si c'est un e-mail : Ouvrir le client de messagerie (\`mailto:...\`).
+     - Si c'est un lien URL : Rediriger vers l'adresse externe ou la page en question.
+
+4. **BOUTON "VOIR PLUS" / "LIRE LA SUITE" SUR LES PARAGRAPHES LONGS** :
+   - Intègre un bouton interactif "Voir plus" / "Lire la suite" en JavaScript sur les paragraphes textuels longs pour une meilleure esthétique de lecture.
+
+5. **GÉNÉRATEUR DE SECTIONS PERSONNALISÉES ("AJOUTER UNE SECTION VAOVAO") DANS L'ADMIN** :
    - Dans \`admin.html\` et \`admin.js\`, l'administrateur doit disposer d'un formulaire dédié "➕ Ajouter une nouvelle section sur-mesure" :
      - Champs : Titre de la section, Contenu / Paragraphe (avec gestion de texte long), Image d'illustration (upload en Base64), Type de fond (Clair / Sombre / Coloré).
      - Bouton "Ajouter au site" qui enregistre la nouvelle section dans Firestore (\`app_data\` -> \`site_content\` -> \`customSections\`) et rafraîchit immédiatement l'affichage sur le site public (\`index.html\`).`;
