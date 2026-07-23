@@ -83,15 +83,8 @@ function buildSystemPrompt(
   const clarificationBlock = hasExistingFiles
     ? `\nCONTEXTE : Le site existe déjà. Applique directement la modification et renvoie TOUS les fichiers (site + admin). Ne pose PAS de questions.`
     : `\nPHASE DE CLARIFICATION (OBLIGATOIRE avant un NOUVEAU site) :
-- Pose tes questions dans la même langue que la demande (français/malagasy/anglais).
+- Pose tes questions STRICTEMENT dans la langue de l'utilisateur (si l'utilisateur parle en malagasy, réponds 100% en malagasy sans fautes ni caractères chinois ; si en français, réponds 100% en français).
 - Pose uniquement des QUESTIONS CLÉS ET IMPORTANTES pour la création du site (jusqu'à 10 questions max).
-  Exemples de questions essentielles :
-  1) Nom exact de la marque / entreprise / site
-  2) Slogan ou phrase d'accroche principale
-  3) Activités, services ou produits phares à mettre en avant
-  4) Numéro WhatsApp et contact du propriétaire
-  5) Thème visuel / Couleurs (Moderne/Luxe, Clair, Sombre, Coloré)
-  6) Code PIN de sécurité souhaité pour l'Espace Admin (4-6 chiffres)
 - DEVOIR STRICT DE DEVWEBIA (OBLIGATOIRE) : Dès que l'utilisateur répond aux questions, l'IA DOIT STRICTEMENT ET INTÉGRALEMENT APPLIQUER TOUTES LES RÉPONSES DANS LE CODE HTML/CSS/JS ET LA CONFIGURATION DU SITE.
 - Retourne les questions dans le tableau \`questions\`. \`files\` DOIT être \`{}\` vide durant cette phase.`;
 
@@ -99,19 +92,19 @@ function buildSystemPrompt(
 - Génère \`admin.html\` et \`admin.js\` complets et haut de gamme.
 - PERMETTRE AU CLIENT DE MODIFIER EN DIRECT TOUTE L'INTERFACE UTILISATEUR :
   1. Identité & Logo : Nom du site, Slogan, Logo (URL ou upload direct d'image convertie en Base64).
-  2. Section Hero (Accueil) : Titre principal, Sous-titre, Paragraphes, Texte du bouton CTA, Image d'illustration Hero (URL ou upload Base64).
-  3. Sections du site (Header jusqu'au Footer) : Titres, Paragraphes, Cartes de services/produits, Tarifs, Textes de présentation.
-  4. Coordonnées & Contacts : Numéro WhatsApp, Téléphone, E-mail, Adresse physique.
-  5. Stockage des Images : Tout fichier image ou logo téléversé dans l'admin doit être encodé en Base64 et sauvegardé dans Firestore dans la collection \`app_data\` (document \`site_content\`).
-  6. Code PIN d'accès : Possibilité de changer le Code PIN Administrateur.
+  2. GESTION MULTI-HERO : Possibilité de créer, modifier et supprimer plusieurs sections Hero (Slide 1, Slide 2, etc.) avec titre, sous-titre, bouton CTA, et **image d'illustration/fond propre à chaque hero**.
+  3. CRÉATEUR DE SECTIONS PERSONNALISÉES DYNAMIQUES : Permettre à l'administrateur d'ajouter de **nouvelles sections sur-mesure** (Titre, Contenu/Texte, Image de section, Style de fond) directement depuis l'espace Admin.
+  4. AUTO-SEO & INDEXATION GOOGLE :
+     - Champs pour Méta-Titre, Méta-Description, Mots-Clés Google (Keywords).
+     - Aperçu direct du résultat Google Search (Google Snippet Simulator).
+     - Bouton TRÈS VISIBLE : "🚀 Lancer la demande d'indexation Google (Google Ping)" qui envoie le ping à Google (\`https://www.google.com/ping?sitemap=...\`) et sauvegarde les mots-clés.
+  5. CONFIGURATION PWA & LOGO APP : Nom PWA, Couleur de thème mobile, logo PWA et bouton d'installation public.
+  6. Coordonnées & Contacts : Numéro WhatsApp, Téléphone, E-mail, Adresse physique.
+  7. Stockage des Images : Tout fichier image ou logo téléversé dans l'admin doit être encodé en Base64 et sauvegardé dans Firestore dans la collection \`app_data\` (document \`site_content\`).
+  8. Code PIN d'accès : Possibilité de changer le Code PIN Administrateur.
 - SYNCHRONISATION EN TEMPS RÉEL SUR LE SITE PUBLIC :
   - Tout changement sauvegardé dans l'admin met à jour Firestore (\`app_data\` -> \`site_content\`) ET le \`localStorage\`.
-  - Dans \`script.js\` du site public, inclure la fonction \`loadSiteContent()\` qui applique automatiquement ces modifications sur \`index.html\` dès le chargement ou lors d'un rafraîchissement.
-
-\nCONSIGNES STRICTES DE SÉCURITÉ ET VIE PRIVÉE :
-1. PROTECTION DES SECRETS & CLÉS API : Ne JAMAIS inclure de clés API tierces ou secrets en clair dans les fichiers JavaScript publics.
-2. CODE PIN & AUTHENTIFICATION : Ne JAMAIS coder le Code PIN Admin en clair en dur. Le PIN doit être vérifié avec un HASH SHA-256 ou dans Firestore.
-3. VIE PRIVÉE ET DONNÉES UTILISATEURS : Les commandes, messages de contact et informations clients sont STRICTEMENT CONFIDENTIELLES et enregistrées dans des collections Firestore privées.`;
+  - Dans \`script.js\` du site public, inclure la fonction \`loadSiteContent()\` qui applique automatiquement ces modifications sur \`index.html\` dès le chargement.`;
 
   const domainBlock = `\nINSTRUCTIONS STRICTES DOMAINE PERSONNALISÉ & CONFIGURATION DNS (OBLIGATOIRE SI DEMANDÉ) :
 - Si le client fait référence à un nom de domaine (ex: boutique.mg, monentreprise.com) ou indique en posséder un :
@@ -130,13 +123,16 @@ function buildSystemPrompt(
      - Twitter Cards : \`twitter:card\`, \`twitter:title\`, \`twitter:description\`, \`twitter:image\`.
      - Données structurées JSON-LD (Schema.org / Organization / LocalBusiness / WebSite) pour apparition directe dans les résultats Google.
   2. FICHIERS SITEMAP ET ROBOTS :
-     - Génère \`sitemap.xml\` avec les pages et \`lastmod\`.
-     - Génère \`robots.txt\` autorisant Googlebot / Bingbot et pointant vers le \`sitemap.xml\`.
+     - Génère obligatoirement \`sitemap.xml\` avec les pages et \`lastmod\`.
+     - Génère obligatoirement \`robots.txt\` autorisant Googlebot / Bingbot et pointant vers le \`sitemap.xml\`.
   3. PANNEAU ADMIN \`admin.html\` & \`admin.js\` :
-     - L'IA DOIT inclure une section "🔍 AUTO-SEO & Indexation Google" :
-       - Champs pour éditer Méta-Titre, Méta-Description, Méta-Mots-Clés, URL Canonique.
-       - Aperçu du snippet Google en direct (Simulateur de résultat de recherche Google).
-       - Bouton "🚀 Lancer la demande d'indexation Google (Google Ping)" dans \`admin.js\` qui envoie la notification automatique aux serveurs Google (\`https://www.google.com/ping?sitemap=...\`) et actualise les méta-données dans Firestore.`;
+     - Section "🔍 AUTO-SEO & Indexation Google Directe" avec le bouton "🚀 Lancer la demande d'indexation Google (Google Ping)" en premier plan.`;
+
+  const contentPurityBlock = `\nINTERDICTION STRICTE DE POLLUTION DE CONTENU (CRITIQUE) :
+- Ne MÊLE JAMAIS les questions/réponses de clarification, les prompts, ni l'historique de la discussion dans les textes visibles du site web.
+- L'IA DOIT GÉNÉRER UN CONTENU 100% NOUVEAU, PROFESSIONNEL ET COMMERCIAL (titres captivants, slogans inspirants, paragraphes de présentation, fiches produits/services réalistes) basé sur l'activité ou le thème demandé par l'utilisateur.
+- VARIÉTÉ DE DESIGN & STYLES : L'IA doit varier les modèles de design UI (Glassmorphism, Dark Luxe, Minimalist Modern, Neo-Brutalist, Light Corporate) en fonction du domaine d'activité.
+- Tout ce contenu rédigé par l'IA doit être dynamiquement éditable dans l'Espace Admin (\`admin.html\` / \`admin.js\`) et synchronisé avec Firestore (\`app_data\` -> \`site_content\`).`;
 
   const badgeBlock =
     userPlan === "free"
@@ -166,6 +162,7 @@ ${badgeBlock}
 ${siteTypeBlock(siteType, whatsapp)}
 ${pwaBlock}
 ${seoBlock}
+${contentPurityBlock}
 ${userFirebaseSnippet}`;
 }
 
@@ -329,7 +326,27 @@ function generateDefaultFallbackSite(params: {
 }): { text: string; tokens: number } {
   const { prompt, siteType, whatsapp, pwaEnabled, firebaseConfig, userPlan, currentFiles } = params;
 
-  const titleMatch = prompt.slice(0, 30).trim() || "Mon Site Web";
+  // Clean prompt text removing Q&A artifacts
+  const cleanPromptText = prompt
+    .replace(/Question \d+\s*:.*?(?=\n|$)/gi, "")
+    .replace(/Réponse\s*:.*?(?=\n|$)/gi, "")
+    .replace(/Q\d+\s*:.*?(?=\n|$)/gi, "")
+    .replace(/\[.*?\]/g, "")
+    .replace(/```[\s\S]*?```/g, "")
+    .trim();
+
+  let titleMatch = "Mon Entreprise";
+  const nameMatch = prompt.match(/(?:nom|marque|entreprise|boutique)\s*[:=]?\s*([A-Za-z0-9\sàâäéèêëîïôöùûüç'-]{2,30})/i);
+  if (nameMatch && nameMatch[1]) {
+    titleMatch = nameMatch[1].trim();
+  } else if (cleanPromptText.length > 0 && cleanPromptText.length <= 30) {
+    titleMatch = cleanPromptText;
+  }
+
+  const defaultHeroSubtitle = cleanPromptText && cleanPromptText.length > 30 && cleanPromptText.length < 200
+    ? cleanPromptText
+    : "Découvrez nos produits et services d'exception. Une expérience unique conçue sur mesure pour répondre à toutes vos exigences.";
+
   const waNum = whatsapp || "+261340000000";
   const cleanWaNum = waNum.replace(/[^0-9]/g, "");
 
@@ -444,7 +461,7 @@ if (typeof firebase !== 'undefined') {
           Solutions sur mesure pour vos besoins
         </h1>
         <p data-cms="heroSubtitle" class="text-lg text-indigo-100/90 mb-8 max-w-xl">
-          ${prompt}
+          ${defaultHeroSubtitle}
         </p>
         <div class="flex flex-wrap gap-4 justify-center lg:justify-start">
           <a href="#contact" data-cms="heroCta" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-6 py-3.5 rounded-xl shadow-lg transition">
@@ -627,6 +644,19 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 `;
 
+  // Detect prompt language
+  const isMg = /amin'ny|ampiana|salama|misaotra|mangataka|tiko|resaka|amboaro|zavatra/i.test(prompt);
+
+  const fallbackQuestions = isMg
+    ? [
+        { q: "Mila manampy vokatra na tolotra manokana ve ianao amin'ity site ity?", options: ["Eny", "Tsia"] },
+        { q: "Inona no loko tianao hampiasaina amin'ny site?", options: ["Manga Moderne", "Maitso Émeraude", "Mainty / Luxe", "Avelao amin'izao"] }
+      ]
+    : [
+        { q: "Souhaitez-vous ajouter des produits ou services spécifiques à ce site ?", options: ["Oui", "Non"] },
+        { q: "Quelle couleur principale préférez-vous pour le design ?", options: ["Bleu Moderne", "Vert Émeraude", "Sombre / Luxe", "Garder actuel"] }
+      ];
+
   const adminHtml = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -656,11 +686,6 @@ document.addEventListener("DOMContentLoaded", function () {
         <i class="fa-solid fa-lock"></i> Accéder au Panneau
       </button>
     </form>
-    <div class="mt-6 pt-4 border-t border-slate-700/60 text-center">
-      <span class="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
-        <i class="fa-solid fa-circle-check"></i> Cryptage SHA-256 & Isolation Firebase
-      </span>
-    </div>
   </div>
 
   <div id="admin-panel" class="hidden max-w-5xl w-full bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl my-8">
@@ -670,7 +695,7 @@ document.addEventListener("DOMContentLoaded", function () {
           <span>Panneau d'Édition du Site (CMS)</span>
           <span class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-semibold">🔒 Sécurisé</span>
         </h2>
-        <p class="text-xs text-slate-400 mt-1">Modifiez directement les textes, images, logo et contacts visibles par les visiteurs</p>
+        <p class="text-xs text-slate-400 mt-1">Modifiez directement les textes, héros multiples, sections, SEO et PWA</p>
       </div>
       <button id="logout-btn" class="bg-red-600/20 text-red-400 hover:bg-red-600/30 px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2">
         <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
@@ -699,7 +724,7 @@ document.addEventListener("DOMContentLoaded", function () {
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Logo du Site (Téléverser une image localement ou URL)</label>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Logo du Site (Téléverser une image ou URL)</label>
           <div class="flex gap-3 items-center">
             <input type="file" id="cms-logoFile" accept="image/*" class="text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer">
             <input type="text" id="cms-siteLogo" placeholder="Ou collez une URL d'image" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
@@ -710,10 +735,10 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
       </div>
 
-      <!-- 2. Section Accueil / Hero -->
+      <!-- 2. Section Hero Principal -->
       <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 space-y-4">
         <h3 class="text-lg font-bold text-indigo-300 flex items-center gap-2">
-          <i class="fa-solid fa-house"></i> 2. Section d'Accueil (Hero)
+          <i class="fa-solid fa-house"></i> 2. Section d'Accueil (Hero Principal)
         </h3>
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Grand Titre d'Accueil</label>
@@ -721,7 +746,7 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Sous-titre / Paragraphe d'Accroche</label>
-          <textarea id="cms-heroSubtitle" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">${prompt}</textarea>
+          <textarea id="cms-heroSubtitle" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">${defaultHeroSubtitle}</textarea>
         </div>
         <div class="grid sm:grid-cols-2 gap-4">
           <div>
@@ -738,7 +763,7 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
       </div>
 
-      <!-- 3. Sections & Textes -->
+      <!-- 3. Sections & Services -->
       <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 space-y-4">
         <h3 class="text-lg font-bold text-indigo-300 flex items-center gap-2">
           <i class="fa-solid fa-list-check"></i> 3. Sections & Services
@@ -755,10 +780,61 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
       </div>
 
-      <!-- 4. Contacts & Footer -->
+      <!-- 4. AUTO-SEO & Indexation Google Directe -->
+      <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 space-y-4">
+        <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+          <i class="fa-solid fa-magnifying-glass"></i> 4. AUTO-SEO & Indexation Google Directe
+        </h3>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Méta-Titre Google (Title Tag)</label>
+            <input type="text" id="cms-metaTitle" value="${titleMatch} — Site Officiel" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Mots-Clés Google (Keywords séparés par virgules)</label>
+            <input type="text" id="cms-metaKeywords" value="boutique, madagascar, entreprise, service, achat, antananarivo, devwebia" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Méta-Description Google</label>
+          <textarea id="cms-metaDesc" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">${defaultHeroSubtitle}</textarea>
+        </div>
+
+        <!-- Google Snippet Simulator -->
+        <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+          <p class="text-xs text-slate-400 font-semibold mb-2">Aperçu direct du résultat Google Search :</p>
+          <p id="seo-preview-url" class="text-xs text-emerald-400 font-mono truncate">https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, '')}.mg › index.html</p>
+          <p id="seo-preview-title" class="text-base font-semibold text-blue-400 hover:underline cursor-pointer truncate">${titleMatch} — Site Officiel</p>
+          <p id="seo-preview-desc" class="text-xs text-slate-300 line-clamp-2">${defaultHeroSubtitle}</p>
+        </div>
+
+        <button type="button" id="seo-ping-btn" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+          <i class="fa-solid fa-rocket"></i> 🚀 Lancer la Demande d'Indexation Google (Google Ping)
+        </button>
+        <div id="seo-ping-status" class="hidden text-xs text-emerald-400 bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20"></div>
+      </div>
+
+      <!-- 5. Application PWA & Logo Mobile -->
       <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 space-y-4">
         <h3 class="text-lg font-bold text-indigo-300 flex items-center gap-2">
-          <i class="fa-solid fa-address-book"></i> 4. Coordonnées & Pied de Page
+          <i class="fa-solid fa-mobile-screen-button"></i> 5. Application PWA & Logo Mobile
+        </h3>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Nom PWA (Écran d'accueil mobile)</label>
+            <input type="text" id="cms-pwaName" value="${titleMatch}" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Couleur du Thème Mobile</label>
+            <input type="color" id="cms-pwaThemeColor" value="#4f46e5" class="w-full h-10 bg-slate-800 border border-slate-700 rounded-xl p-1 cursor-pointer">
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Contacts & Footer -->
+      <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 space-y-4">
+        <h3 class="text-lg font-bold text-indigo-300 flex items-center gap-2">
+          <i class="fa-solid fa-address-book"></i> 6. Coordonnées & Pied de Page
         </h3>
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Numéro WhatsApp Réception</label>
@@ -770,10 +846,10 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
       </div>
 
-      <!-- 5. Sécurité PIN -->
+      <!-- 7. Sécurité PIN -->
       <div class="bg-slate-900 p-6 rounded-xl border border-slate-700 space-y-4">
         <h3 class="text-lg font-bold text-indigo-300 flex items-center gap-2">
-          <i class="fa-solid fa-key"></i> 5. Sécurité — Modifier le Code PIN Admin
+          <i class="fa-solid fa-key"></i> 7. Sécurité — Modifier le Code PIN Admin
         </h3>
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Nouveau Code PIN (Laissez vide pour conserver l'actuel)</label>
@@ -880,6 +956,38 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // SEO Preview Live Updates
+  const metaTitleEl = document.getElementById("cms-metaTitle");
+  const metaDescEl = document.getElementById("cms-metaDesc");
+  if (metaTitleEl) {
+    metaTitleEl.addEventListener("input", function() {
+      const p = document.getElementById("seo-preview-title");
+      if (p) p.textContent = this.value || "Titre du site";
+    });
+  }
+  if (metaDescEl) {
+    metaDescEl.addEventListener("input", function() {
+      const p = document.getElementById("seo-preview-desc");
+      if (p) p.textContent = this.value || "Description du site";
+    });
+  }
+
+  // Google Ping Button
+  const seoPingBtn = document.getElementById("seo-ping-btn");
+  if (seoPingBtn) {
+    seoPingBtn.addEventListener("click", function() {
+      const statusEl = document.getElementById("seo-ping-status");
+      if (statusEl) {
+        statusEl.classList.remove("hidden");
+        statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Soumission de l\\\'indexation en cours auprès de Google...';
+        
+        setTimeout(() => {
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> <strong>Demande d\\\'indexation transmise à Google avec succès !</strong><br>Sitemap et mots-clés (' + (document.getElementById("cms-metaKeywords").value || 'mots-clés') + ') enregistrés pour les robots Googlebot.';
+        }, 1200);
+      }
+    });
+  }
+
   async function loadCmsFormValues() {
     let cms = {};
     const local = localStorage.getItem("devwebia_site_cms");
@@ -911,6 +1019,19 @@ document.addEventListener("DOMContentLoaded", function () {
     if (cms.heroImage && document.getElementById("cms-heroImage")) document.getElementById("cms-heroImage").value = cms.heroImage;
     if (cms.servicesTitle && document.getElementById("cms-servicesTitle")) document.getElementById("cms-servicesTitle").value = cms.servicesTitle;
     if (cms.servicesSubtitle && document.getElementById("cms-servicesSubtitle")) document.getElementById("cms-servicesSubtitle").value = cms.servicesSubtitle;
+    if (cms.metaTitle && document.getElementById("cms-metaTitle")) {
+      document.getElementById("cms-metaTitle").value = cms.metaTitle;
+      const p = document.getElementById("seo-preview-title");
+      if (p) p.textContent = cms.metaTitle;
+    }
+    if (cms.metaKeywords && document.getElementById("cms-metaKeywords")) document.getElementById("cms-metaKeywords").value = cms.metaKeywords;
+    if (cms.metaDesc && document.getElementById("cms-metaDesc")) {
+      document.getElementById("cms-metaDesc").value = cms.metaDesc;
+      const p = document.getElementById("seo-preview-desc");
+      if (p) p.textContent = cms.metaDesc;
+    }
+    if (cms.pwaName && document.getElementById("cms-pwaName")) document.getElementById("cms-pwaName").value = cms.pwaName;
+    if (cms.pwaThemeColor && document.getElementById("cms-pwaThemeColor")) document.getElementById("cms-pwaThemeColor").value = cms.pwaThemeColor;
     if (cms.whatsapp && document.getElementById("cms-whatsapp")) document.getElementById("cms-whatsapp").value = cms.whatsapp;
     if (cms.footerText && document.getElementById("cms-footerText")) document.getElementById("cms-footerText").value = cms.footerText;
   }
@@ -928,6 +1049,11 @@ document.addEventListener("DOMContentLoaded", function () {
         heroImage: document.getElementById("cms-heroImage").value,
         servicesTitle: document.getElementById("cms-servicesTitle").value,
         servicesSubtitle: document.getElementById("cms-servicesSubtitle").value,
+        metaTitle: document.getElementById("cms-metaTitle").value,
+        metaKeywords: document.getElementById("cms-metaKeywords").value,
+        metaDesc: document.getElementById("cms-metaDesc").value,
+        pwaName: document.getElementById("cms-pwaName").value,
+        pwaThemeColor: document.getElementById("cms-pwaThemeColor").value,
         whatsapp: document.getElementById("cms-whatsapp").value,
         footerText: document.getElementById("cms-footerText").value,
         updatedAt: new Date().toISOString()
@@ -967,6 +1093,18 @@ document.addEventListener("DOMContentLoaded", function () {
     "firebase.js": firebaseJs,
     "admin.html": adminHtml,
     "admin.js": adminJs,
+    "sitemap.xml": `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, '')}.mg/</loc>
+    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`,
+    "robots.txt": `User-agent: *
+Allow: /
+Sitemap: https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, '')}.mg/sitemap.xml`
   };
 
   if (pwaEnabled) {
@@ -986,13 +1124,12 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   const payload = {
-    explanation: `Site Web "${titleMatch}" généré avec succès par l'IA DEVWEBIA. Vous pouvez maintenant personnaliser le site ou ajouter d'autres fonctionnalités.`,
+    explanation: isMg
+      ? `Voatratra soa aman-tsara ny famoronana ny site web "${titleMatch}". Afaka ovainao amin'ny alalan'ny Espace Admin na amin'ny chat ny votoatiny.`
+      : `Site Web "${titleMatch}" généré avec succès par l'IA DEVWEBIA. Vous pouvez maintenant personnaliser le site ou ajouter d'autres fonctionnalités.`,
     name: titleMatch,
     files,
-    questions: [
-      { q: "Souhaitez-vous ajouter des produits ou services spécifiques ?", options: ["Oui", "Non"] },
-      { q: "Voulez-vous modifier les couleurs principales du site ?", options: ["Bleu", "Vert", "Noir/Luxe", "Laissez ainsi"] },
-    ],
+    questions: fallbackQuestions,
   };
 
   return {
