@@ -84,7 +84,7 @@ function buildSystemPrompt(
     ? `\nCONTEXTE : Le site existe déjà. Applique directement la modification et renvoie TOUS les fichiers (site + admin). Ne pose PAS de questions.`
     : `\nPHASE DE CLARIFICATION (OBLIGATOIRE avant un NOUVEAU site) :
 - Pose tes questions STRICTEMENT dans la langue de l'utilisateur (si l'utilisateur parle en malagasy, réponds 100% en malagasy sans fautes ni caractères chinois ; si en français, réponds 100% en français).
-- Pose uniquement des QUESTIONS CLÉS ET IMPORTANTES pour la création du site (jusqu'à 10 questions max).
+- Pose au moins 15 QUESTIONS CLÉS, STRUCTURÉES ET PROFESSIONNELLES pour la création du site (15 questions minimum) afin de construire un site web hautement professionnel, moderne et attrayant.
 - DEVOIR STRICT DE DEVWEBIA (OBLIGATOIRE) : Dès que l'utilisateur répond aux questions, l'IA DOIT STRICTEMENT ET INTÉGRALEMENT APPLIQUER TOUTES LES RÉPONSES DANS LE CODE HTML/CSS/JS ET LA CONFIGURATION DU SITE.
 - Retourne les questions dans le tableau \`questions\`. \`files\` DOIT être \`{}\` vide durant cette phase.`;
 
@@ -649,12 +649,38 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const fallbackQuestions = isMg
     ? [
-        { q: "Mila manampy vokatra na tolotra manokana ve ianao amin'ity site ity?", options: ["Eny", "Tsia"] },
-        { q: "Inona no loko tianao hampiasaina amin'ny site?", options: ["Manga Moderne", "Maitso Émeraude", "Mainty / Luxe", "Avelao amin'izao"] }
+        { q: "1. Inona no anarana marina sy ofisialin'ny marika na ny enterprise anao?", options: ["Anarana manokana", "Mbola ho karohina"] },
+        { q: "2. Inona no slogan na phrase d'accroche lehibe indrindra amin'ny site?", options: ["Slogan matihanina", "Mila hevitra amin'ny IA"] },
+        { q: "3. Inona avy ireo tolotra na vokatra phares tianao asongadina indrindra?", options: ["Vokatra / Sary ary vidiny", "Tolotra sy fanazavana", "Samy misy azy roa"] },
+        { q: "4. Inona no loko fototra sy style visuel tianao hampiasaina?", options: ["Manga Moderne & Fotsy", "Maitso Émeraude & Voajanahary", "Mainty / Dark Luxe", "Volamena / Élégant"] },
+        { q: "5. Mila section Hero maromaro (Slides am-panombohana) ve ianao?", options: ["Eny, Slide 2 na 3 misy sary tsara", "Iray ihany dia ampy"] },
+        { q: "6. Inona no nomerao WhatsApp fandraisana kaomandy na hafatra?", options: ["Mila bokatra WhatsApp direct", "Aleo formulaire e-mail sy antso"] },
+        { q: "7. Inona no adiresy fizika sy tanàna hisy ny orinasa na boutique?", options: ["Antananarivo / Madagascar", "En ligne ihany (Tsy misy boutique)"] },
+        { q: "8. Inona avy ireo mot-clé Google (SEO) tianao hahitana anao haingana amin'ny recherche?", options: ["Achat, boutique, Madagascar", "Services, entreprise, Antananarivo", "Tolo-kevitra automatique"] },
+        { q: "9. Tianao hisy bokatra PWA (Installer l'application) amin'ny mobile ve?", options: ["Eny, PWA complet amin'ny smartphone", "Tsia, site web ihany"] },
+        { q: "10. Inona no Code PIN tianao hidirana ao amin'ny Panneau Admin (CMS)?", options: ["1234 (Azo ovaina rehefa avy eo)", "Code PIN personnalisé"] },
+        { q: "11. Tianao hisy section 'Momba anay' (A propos) sy tantaran'ny marika ve?", options: ["Eny, misy sary sy tantara", "Tsia, aleo mivantana amin'ny vokatra"] },
+        { q: "12. Inona no fomba fandoavam-bola sy kaomandy tianao hiseho?", options: ["Paiement / Kaomandy WhatsApp", "Mobile Money (MVola/Orange/Airtel)", "Paiement en espèces amin'ny livraison"] },
+        { q: "13. Tianao hisy section 'Fijetsena sy Avis clients' (Testimonials) ve?", options: ["Eny, misy kintana sy hevitry ny mpanjifa", "Tsia"] },
+        { q: "14. Manana nom de domaine manokana ve ianao (ohatra: .mg na .com)?", options: ["Manana domaine (.mg / .com)", "Mbola hampiasa le lien gratuit aloha"] },
+        { q: "15. Inona no fanampiny na fonctionnalité manokana tianao hampiana ao amin'ny site?", options: ["Galerie d'images", "Formulaire de contact dynamique", "Filtre karkara vokatra", "Espace membres / Client"] }
       ]
     : [
-        { q: "Souhaitez-vous ajouter des produits ou services spécifiques à ce site ?", options: ["Oui", "Non"] },
-        { q: "Quelle couleur principale préférez-vous pour le design ?", options: ["Bleu Moderne", "Vert Émeraude", "Sombre / Luxe", "Garder actuel"] }
+        { q: "1. Quel est le nom exact et officiel de votre marque ou entreprise ?", options: ["Nom spécifique", "À suggérer par l'IA"] },
+        { q: "2. Quel est votre slogan ou phrase d'accroche principale ?", options: ["Slogan professionnel", "Idées par l'IA"] },
+        { q: "3. Quels sont les produits ou services phares à mettre en avant ?", options: ["Catalogue produits avec prix", "Services & devis", "Les deux"] },
+        { q: "4. Quelle palette de couleurs et style visuel préférez-vous ?", options: ["Bleu Moderne & Blanc", "Vert Émeraude & Nature", "Sombre / Dark Luxe", "Doré / Élégant"] },
+        { q: "5. Souhaitez-vous plusieurs carrousels/slides Hero d'accueil ?", options: ["Oui, 2 ou 3 slides dynamiques", "Un seul Hero suffit"] },
+        { q: "6. Quel est votre numéro WhatsApp pour recevoir les commandes ?", options: ["Bouton WhatsApp direct", "Formulaire e-mail & appel"] },
+        { q: "7. Quelle est l'adresse physique ou ville de votre entreprise ?", options: ["Antananarivo / Madagascar", "100% En ligne (Sans boutique)"] },
+        { q: "8. Quels mots-clés Google (SEO) viserez-vous en priorité ?", options: ["Achat, boutique, Madagascar", "Services, entreprise, Antananarivo", "Suggérer automatiquement"] },
+        { q: "9. Voulez-vous activer le bouton PWA d'installation mobile ?", options: ["Oui, PWA 100% installable sur mobile", "Non, site web standard"] },
+        { q: "10. Quel Code PIN de sécurité souhaitez-vous pour l'Espace Admin ?", options: ["1234 (Modifiable plus tard)", "Code PIN personnalisé"] },
+        { q: "11. Souhaitez-vous une section 'À Propos' détaillée ?", options: ["Oui, avec présentation et valeurs", "Non, passer direct au contenu"] },
+        { q: "12. Quels modes de commande et paiement souhaitez-vous afficher ?", options: ["Commande directe WhatsApp", "Mobile Money (MVola/Orange/Airtel)", "Paiement à la livraison"] },
+        { q: "13. Voulez-vous une section 'Avis & Témoignages Clients' ?", options: ["Oui, avec notes étoiles", "Non"] },
+        { q: "14. Avez-vous un nom de domaine personnalisé (ex: .mg ou .com) ?", options: ["Oui (.mg / .com)", "Non, utiliser le lien gratuit"] },
+        { q: "15. Quelle fonctionnalité supplémentaire souhaitez-vous inclure ?", options: ["Galerie photos", "Formulaire interactif", "Filtre par catégories", "Espace client"] }
       ];
 
   const adminHtml = `<!DOCTYPE html>
