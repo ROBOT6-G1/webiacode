@@ -585,23 +585,6 @@ async function callAdminKey(
   return { text, tokens };
 }
 
-async function callGateway(apiKey: string, messages: Array<{ role: string; content: string }>) {
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages,
-      temperature: 0.7, max_tokens: 32768,
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Gateway ${res.status}: ${await res.text()}`);
-  const json = await res.json();
-  const text = json.choices?.[0]?.message?.content ?? "";
-  const tokens = json.usage?.total_tokens ?? 0;
-  return { text, tokens };
-}
 
 function generateDefaultFallbackSite(params: {
   prompt: string;
@@ -3138,8 +3121,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     }
     messages.push({ role: "user", content: userMsg });
 
-    const geminiEnvKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    const lovableKey = process.env.LOVABLE_API_KEY;
+    const geminiEnvKey = process.env.GEMINI_API_KEY || process.env.API_KEY || process.env.VITE_GEMINI_API_KEY;
     let result: { text: string; tokens: number } | null = null;
 
     if (useByok) {
@@ -3155,14 +3137,6 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
         result = await callAdminKey(geminiEnvKey, "google", messages);
       } catch (err) {
         console.warn("System GEMINI_API_KEY failed:", err);
-      }
-    }
-
-    if (!result && lovableKey) {
-      try {
-        result = await callGateway(lovableKey, messages);
-      } catch (err) {
-        console.warn("LOVABLE_API_KEY gateway failed:", err);
       }
     }
 
