@@ -16,14 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { auth, firebaseSignOut, db } from "@/integrations/firebase/client";
-import {
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Sparkles,

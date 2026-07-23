@@ -101,7 +101,7 @@ function ChatIndex() {
       toast.error(
         lang === "mg"
           ? "Tsy maintsy ampidirina ny laharana WhatsApp amin'ny varotra"
-          : "Le numéro WhatsApp est obligatoire pour un site e-commerce"
+          : "Le numéro WhatsApp est obligatoire pour un site e-commerce",
       );
       return;
     }
@@ -126,7 +126,7 @@ function ChatIndex() {
             : "DEVWEBIA a quelques questions pour vous…"
           : lang === "mg"
             ? "Lasa soa aman-tsara ny tranonkala !"
-            : "Site créé !"
+            : "Site créé !",
       );
       navigate({ to: "/app/$projectId", params: { projectId: res.projectId! } });
     } catch (err) {
@@ -149,12 +149,8 @@ function ChatIndex() {
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-primary text-primary-foreground mb-4">
             <Sparkles className="h-7 w-7" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            {t.appIndex.title}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            {t.appIndex.subtitle}
-          </p>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{t.appIndex.title}</h1>
+          <p className="text-muted-foreground mt-2">{t.appIndex.subtitle}</p>
         </div>
 
         {/* Site type picker */}
@@ -213,7 +209,9 @@ function ChatIndex() {
           <div className="flex items-center justify-between pb-2 border-b border-border">
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-primary" />
-              <span className="text-xs font-semibold text-muted-foreground">{t.appIndex.aiLangLabel}</span>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {t.appIndex.aiLangLabel}
+              </span>
               <select
                 value={lang}
                 onChange={(e) => changeLanguage(e.target.value as Language)}
@@ -272,9 +270,7 @@ function ChatIndex() {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
               }}
               placeholder={
-                imageBase64
-                  ? t.appIndex.promptPlaceholderImage
-                  : t.appIndex.promptPlaceholder
+                imageBase64 ? t.appIndex.promptPlaceholderImage : t.appIndex.promptPlaceholder
               }
               rows={4}
               className="border-0 bg-transparent focus-visible:ring-0 resize-none text-base"

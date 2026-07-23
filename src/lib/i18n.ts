@@ -37,8 +37,10 @@ export const translations = {
       organization: "Organisation / Association",
       whatsappLabel: "Numéro WhatsApp (Obligatoire pour E-Commerce) :",
       pwaLabel: "Activer PWA (Installable sur Mobile & PC)",
-      promptPlaceholder: "Décrivez précisément votre site (nom, style, sections, couleurs, contenu) ou uploadez une image...",
-      promptPlaceholderImage: "Décrivez le style de cette image pour que l'IA crée un site similaire...",
+      promptPlaceholder:
+        "Décrivez précisément votre site (nom, style, sections, couleurs, contenu) ou uploadez une image...",
+      promptPlaceholderImage:
+        "Décrivez le style de cette image pour que l'IA crée un site similaire...",
       uploadImageTooltip: "Téléverser une image de référence ou maquette pour l'IA",
       aiLangLabel: "Langue de l'IA :",
       creditCost: "~1 crédit / génération",
@@ -60,8 +62,10 @@ export const translations = {
       openNewTab: "Ouvrir dans un nouvel onglet",
       downloadZip: "Télécharger ZIP",
       pwaReady: "Prêt pour PWA !",
-      pwaDesc: "Téléchargez votre application Progressive Web App installable sur Android, iOS et Desktop.",
-      modifyPromptPlaceholder: "Décrivez une modification (ex: changer les couleurs, ajouter une section)...",
+      pwaDesc:
+        "Téléchargez votre application Progressive Web App installable sur Android, iOS et Desktop.",
+      modifyPromptPlaceholder:
+        "Décrivez une modification (ex: changer les couleurs, ajouter une section)...",
       sendBtn: "Envoyer",
       deployBtn: "Déployer / Publier",
       aiLang: "Langue IA :",
@@ -81,7 +85,8 @@ export const translations = {
     },
     aiSettingsPage: {
       title: "Configuration de la clé IA (BYOK)",
-      subtitle: "Utilisez votre propre clé API Gemini pour une utilisation illimitée sans consommer vos crédits.",
+      subtitle:
+        "Utilisez votre propre clé API Gemini pour une utilisation illimitée sans consommer vos crédits.",
     },
     common: {
       fr: "🇫🇷 Français",
@@ -115,7 +120,8 @@ export const translations = {
     },
     appIndex: {
       title: "Mamorona tranonkala feno miaraka amin'i DEVWEBIA",
-      subtitle: "Ny IA no mamorona, manoratra, manao kaody ary mamoaka ny tranonkalanao ao anatin'ny segondra voley.",
+      subtitle:
+        "Ny IA no mamorona, manoratra, manao kaody ary mamoaka ny tranonkalanao ao anatin'ny segondra voley.",
       siteType: "Karazana tranonkala :",
       showcase: "Fampisehoana / Orinasa",
       service: "Tolotra / Portfolio",
@@ -125,8 +131,10 @@ export const translations = {
       organization: "Fikambanana / Association",
       whatsappLabel: "Laharana WhatsApp (Tsy maintsy amin'ny Varotra) :",
       pwaLabel: "Ampidiro PWA (Azo apetraka amin'ny Mobile & PC)",
-      promptPlaceholder: "Azolazao mazava tsara ny tranonkalanao (anarana, style, fizarana, loko, votoatiny) na mampidira sary inspirasiona…",
-      promptPlaceholderImage: "Hatsarao na hazavao ny fomban'ity sary ity mba hamoronan'ny IA tranonkala mitovy aminy...",
+      promptPlaceholder:
+        "Azolazao mazava tsara ny tranonkalanao (anarana, style, fizarana, loko, votoatiny) na mampidira sary inspirasiona…",
+      promptPlaceholderImage:
+        "Hatsarao na hazavao ny fomban'ity sary ity mba hamoronan'ny IA tranonkala mitovy aminy...",
       uploadImageTooltip: "Mampidira sary fanazavana na maquette ho an'ny IA",
       aiLangLabel: "Fithenin'ny IA :",
       creditCost: "~1 kredity / famoronana",
@@ -148,8 +156,10 @@ export const translations = {
       openNewTab: "Sokafy amin'ny takelaka vaovao",
       downloadZip: "Ampidino ZIP",
       pwaReady: "Kready ho an'ny PWA !",
-      pwaDesc: "Ampidino ny aplikasiona Progressive Web App azo apetraka amin'ny Android, iOS ary PC.",
-      modifyPromptPlaceholder: "Azolazao ny fanovana (oh: manova loko, manampy fizarana, manitsy teksta)...",
+      pwaDesc:
+        "Ampidino ny aplikasiona Progressive Web App azo apetraka amin'ny Android, iOS ary PC.",
+      modifyPromptPlaceholder:
+        "Azolazao ny fanovana (oh: manova loko, manampy fizarana, manitsy teksta)...",
       sendBtn: "Avoaka",
       deployBtn: "Hamoaka amin'ny tranonkala",
       aiLang: "Fithenin'ny IA :",
@@ -169,7 +179,8 @@ export const translations = {
     },
     aiSettingsPage: {
       title: "Fanamboarana ny lakile IA (BYOK)",
-      subtitle: "Ampiasao ny lakile API Gemini anao manokana mba hampiasana tsy misy fetra tsy lany kredity.",
+      subtitle:
+        "Ampiasao ny lakile API Gemini anao manokana mba hampiasana tsy misy fetra tsy lany kredity.",
     },
     common: {
       fr: "🇫🇷 Français",
@@ -213,8 +224,10 @@ export const translations = {
       organization: "Organization / NGO",
       whatsappLabel: "WhatsApp Number (Required for E-commerce):",
       pwaLabel: "Enable PWA (Installable on Mobile & PC)",
-      promptPlaceholder: "Describe your website precisely (name, style, sections, colors, content) or upload an image...",
-      promptPlaceholderImage: "Describe the style of this image for the AI to create a similar site...",
+      promptPlaceholder:
+        "Describe your website precisely (name, style, sections, colors, content) or upload an image...",
+      promptPlaceholderImage:
+        "Describe the style of this image for the AI to create a similar site...",
       uploadImageTooltip: "Upload a reference image or mockup for the AI",
       aiLangLabel: "AI Language:",
       creditCost: "~1 credit / generation",
@@ -237,7 +250,8 @@ export const translations = {
       downloadZip: "Download ZIP",
       pwaReady: "Ready for PWA!",
       pwaDesc: "Download your Progressive Web App installable on Android, iOS and Desktop.",
-      modifyPromptPlaceholder: "Describe a change (e.g., change colors, add a section, edit text)...",
+      modifyPromptPlaceholder:
+        "Describe a change (e.g., change colors, add a section, edit text)...",
       sendBtn: "Send",
       deployBtn: "Deploy / Publish",
       aiLang: "AI Language:",
@@ -389,8 +403,10 @@ export const translations = {
       organization: "Organizzazione / Associazione",
       whatsappLabel: "Numero WhatsApp (Obbligatorio per E-Commerce):",
       pwaLabel: "Abilita PWA (Installabile su Mobile e PC)",
-      promptPlaceholder: "Descrivi con precisione il tuo sito (nome, stile, sezioni, colori, contenuto) o carica un'immagine...",
-      promptPlaceholderImage: "Descrivi lo stile di questa immagine affinché l'IA crei un sito simile...",
+      promptPlaceholder:
+        "Descrivi con precisione il tuo sito (nome, stile, sezioni, colori, contenuto) o carica un'immagine...",
+      promptPlaceholderImage:
+        "Descrivi lo stile di questa immagine affinché l'IA crei un sito simile...",
       uploadImageTooltip: "Carica un'immagine di riferimento o mockup per l'IA",
       aiLangLabel: "Lingua IA:",
       creditCost: "~1 credito / generazione",
@@ -413,7 +429,8 @@ export const translations = {
       downloadZip: "Scarica ZIP",
       pwaReady: "Pronto per PWA!",
       pwaDesc: "Scarica la tua Progressive Web App installabile su Android, iOS e Desktop.",
-      modifyPromptPlaceholder: "Descrivi una modifica (es. cambiare colori, aggiungere una sezione)...",
+      modifyPromptPlaceholder:
+        "Descrivi una modifica (es. cambiare colori, aggiungere una sezione)...",
       sendBtn: "Invia",
       deployBtn: "Distribuisci / Pubblica",
       aiLang: "Lingua IA:",

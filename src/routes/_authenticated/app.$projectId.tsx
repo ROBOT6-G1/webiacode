@@ -102,15 +102,24 @@ function ProjectView() {
   const { projectId } = Route.useParams();
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      setImageBase64(reader.result as string);
+      if (isMounted.current) setImageBase64(reader.result as string);
     };
     reader.readAsDataURL(file);
   };
@@ -150,6 +159,7 @@ function ProjectView() {
   }, [messages.data?.length, streamFile]);
 
   const runGenerate = async (userPrompt: string) => {
+    if (!isMounted.current) return;
     setLoading(true);
     setStreamFile(null);
     try {
@@ -158,30 +168,41 @@ function ProjectView() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const res = await generateSite({
-        data: { projectId, prompt: userPrompt, language: lang, imageBase64: imageBase64 || undefined },
+        data: {
+          projectId,
+          prompt: userPrompt,
+          language: lang,
+          imageBase64: imageBase64 || undefined,
+        },
         headers,
       });
+      if (!isMounted.current) return;
       setImageBase64(null);
       const entries = Object.entries(res.files || {});
       for (const [path, content] of entries) {
         const preview = content.slice(0, 600);
         const stepSize = Math.max(8, Math.ceil(preview.length / 40));
         for (let i = 0; i <= preview.length; i += stepSize) {
+          if (!isMounted.current) return;
           setStreamFile({ path, content: preview.slice(0, i) });
           await new Promise((r) => setTimeout(r, 25));
         }
       }
+      if (!isMounted.current) return;
       setStreamFile(null);
       if (entries.length > 0) setUpToDate(false);
       await queryClient.invalidateQueries();
     } catch (err) {
+      if (!isMounted.current) return;
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("insufficient_credits"))
         toast.error("Crédits insuffisants — allez sur /credits");
       else toast.error(msg);
     } finally {
-      setStreamFile(null);
-      setLoading(false);
+      if (isMounted.current) {
+        setStreamFile(null);
+        setLoading(false);
+      }
     }
   };
 
@@ -354,7 +375,9 @@ function ProjectView() {
           <div className="border-t border-border p-4 space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-medium">{t.appProject.aiLang}</span>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {t.appProject.aiLang}
+                </span>
                 <select
                   value={lang}
                   onChange={(e) => changeLanguage(e.target.value as Language)}

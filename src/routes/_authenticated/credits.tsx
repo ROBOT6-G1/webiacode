@@ -107,9 +107,7 @@ function CreditsPage() {
           <Coins className="h-8 w-8 text-primary" />
           {t.creditsPage.title}
         </h1>
-        <p className="text-muted-foreground mt-1">
-          {t.creditsPage.subtitle}
-        </p>
+        <p className="text-muted-foreground mt-1">{t.creditsPage.subtitle}</p>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
