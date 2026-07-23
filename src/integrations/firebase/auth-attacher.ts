@@ -7,5 +7,5 @@ export const attachFirebaseAuth = createMiddleware({ type: "function" }).client(
     return next({
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-  }
+  },
 );

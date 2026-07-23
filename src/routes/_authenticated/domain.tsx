@@ -7,7 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Globe, Server, CheckCircle2, Clock, Trash2, ArrowRight, ShieldCheck, Copy } from "lucide-react";
+import {
+  Globe,
+  Server,
+  CheckCircle2,
+  Clock,
+  Trash2,
+  ArrowRight,
+  ShieldCheck,
+  Copy,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/domain")({
   component: Domain,
@@ -35,7 +44,11 @@ function Domain() {
   });
 
   const add = async () => {
-    const cleanDomain = domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const cleanDomain = domain
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/.*$/, "");
     if (!cleanDomain) {
       toast.error("Veuillez saisir un nom de domaine valide (ex: monentreprise.mg)");
       return;
@@ -52,7 +65,9 @@ function Domain() {
         created_at: new Date().toISOString(),
       });
 
-      toast.success(`Domaine ${cleanDomain} enregistré ! Suivez les étapes de configuration DNS ci-dessous.`);
+      toast.success(
+        `Domaine ${cleanDomain} enregistré ! Suivez les étapes de configuration DNS ci-dessous.`,
+      );
       setDomain("");
       queryClient.invalidateQueries();
     } catch (err) {
@@ -86,7 +101,10 @@ function Domain() {
           Domaine Personnalisé & DNS
         </h1>
         <p className="text-muted-foreground mt-1">
-          Liez votre propre nom de domaine (ex: <span className="font-mono text-primary font-medium">boutique.mg</span>, <span className="font-mono text-primary font-medium">monentreprise.com</span>) à vos sites web générés sur DEVWEBIA.
+          Liez votre propre nom de domaine (ex:{" "}
+          <span className="font-mono text-primary font-medium">boutique.mg</span>,{" "}
+          <span className="font-mono text-primary font-medium">monentreprise.com</span>) à vos sites
+          web générés sur DEVWEBIA.
         </p>
       </div>
 
@@ -120,7 +138,9 @@ function Domain() {
           Guide de Configuration DNS (Obligatoire chez votre fournisseur de domaine)
         </h3>
         <p className="text-sm text-muted-foreground">
-          Pour que votre domaine pointe vers vos sites DEVWEBIA, connectez-vous au panneau de votre fournisseur de domaine (OVH, Hostinger, GoDaddy, LWS, Namecheap, etc.) et ajoutez ces deux enregistrements DNS :
+          Pour que votre domaine pointe vers vos sites DEVWEBIA, connectez-vous au panneau de votre
+          fournisseur de domaine (OVH, Hostinger, GoDaddy, LWS, Namecheap, etc.) et ajoutez ces deux
+          enregistrements DNS :
         </p>
 
         <div className="grid md:grid-cols-2 gap-4">
@@ -130,10 +150,20 @@ function Domain() {
               <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">Recommandé</span>
             </div>
             <div className="space-y-1 font-mono text-sm">
-              <p><span className="text-muted-foreground">Nom :</span> <strong>@</strong> (ou vide)</p>
+              <p>
+                <span className="text-muted-foreground">Nom :</span> <strong>@</strong> (ou vide)
+              </p>
               <div className="flex justify-between items-center bg-muted p-2 rounded-lg">
-                <span><span className="text-muted-foreground">Valeur :</span> <strong>76.76.21.21</strong></span>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => copyToClipboard("76.76.21.21", "Adresse IP Vercel")}>
+                <span>
+                  <span className="text-muted-foreground">Valeur :</span>{" "}
+                  <strong>76.76.21.21</strong>
+                </span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => copyToClipboard("76.76.21.21", "Adresse IP Vercel")}
+                >
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -146,10 +176,20 @@ function Domain() {
               <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">Recommandé</span>
             </div>
             <div className="space-y-1 font-mono text-sm">
-              <p><span className="text-muted-foreground">Nom :</span> <strong>www</strong></p>
+              <p>
+                <span className="text-muted-foreground">Nom :</span> <strong>www</strong>
+              </p>
               <div className="flex justify-between items-center bg-muted p-2 rounded-lg">
-                <span><span className="text-muted-foreground">Valeur :</span> <strong>cname.vercel-dns.com</strong></span>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => copyToClipboard("cname.vercel-dns.com", "Target CNAME")}>
+                <span>
+                  <span className="text-muted-foreground">Valeur :</span>{" "}
+                  <strong>cname.vercel-dns.com</strong>
+                </span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => copyToClipboard("cname.vercel-dns.com", "Target CNAME")}
+                >
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -158,21 +198,27 @@ function Domain() {
         </div>
 
         <p className="text-xs text-muted-foreground italic">
-          💡 Remarque : La propagation DNS mondiale peut prendre entre 5 minutes et 24 heures selon votre registraire.
+          💡 Remarque : La propagation DNS mondiale peut prendre entre 5 minutes et 24 heures selon
+          votre registraire.
         </p>
       </div>
 
       {/* List of Configured Domains */}
       <div className="space-y-3">
-        <h3 className="text-lg font-bold">Vos Domaines Enregistrés ({domains.data?.length ?? 0})</h3>
-        {(!domains.data || domains.data.length === 0) ? (
+        <h3 className="text-lg font-bold">
+          Vos Domaines Enregistrés ({domains.data?.length ?? 0})
+        </h3>
+        {!domains.data || domains.data.length === 0 ? (
           <div className="p-8 text-center rounded-2xl border border-dashed border-border text-muted-foreground text-sm">
             Aucun domaine personnalisé enregistré pour le moment.
           </div>
         ) : (
           <div className="space-y-3">
             {domains.data.map((d) => (
-              <div key={d.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl border border-border bg-card gap-4">
+              <div
+                key={d.id}
+                className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl border border-border bg-card gap-4"
+              >
                 <div className="flex items-center gap-3">
                   <Globe className="h-5 w-5 text-primary" />
                   <div>

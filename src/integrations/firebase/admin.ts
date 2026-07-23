@@ -80,7 +80,11 @@ export const adminDb = {
   },
 
   async getMessages(projectId: string) {
-    const q = query(collection(db, "messages"), where("project_id", "==", projectId), orderBy("created_at", "asc"));
+    const q = query(
+      collection(db, "messages"),
+      where("project_id", "==", projectId),
+      orderBy("created_at", "asc"),
+    );
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   },
@@ -90,5 +94,5 @@ export const adminDb = {
     const q = query(collection(db, "app_users"), where("projectId", "==", projectId));
     const snap = await getDocs(q);
     return snap.size;
-  }
+  },
 };

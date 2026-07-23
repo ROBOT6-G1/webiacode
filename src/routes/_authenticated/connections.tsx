@@ -71,7 +71,9 @@ function Connections() {
       toast.success("Connexion enregistrée");
       qc.invalidateQueries({ queryKey: ["user_integrations"] });
     } catch (err) {
-      toast.error("Erreur d'enregistrement : " + (err instanceof Error ? err.message : String(err)));
+      toast.error(
+        "Erreur d'enregistrement : " + (err instanceof Error ? err.message : String(err)),
+      );
     } finally {
       setSaving(null);
     }
@@ -91,12 +93,15 @@ function Connections() {
           Applications connectées
         </h1>
         <p className="text-muted-foreground mt-2">
-          Reliez vos comptes via clé API pour publier vos sites automatiquement et utiliser Firebase pour le stockage et l'authentification.
+          Reliez vos comptes via clé API pour publier vos sites automatiquement et utiliser Firebase
+          pour le stockage et l'authentification.
         </p>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
       ) : (
         <>
           {/* GITHUB */}
@@ -105,12 +110,31 @@ function Connections() {
             title="GitHub"
             connected={connected.github}
             description="Obligatoire pour envoyer votre code sur GitHub avant le déploiement Vercel."
-            docLink={{ href: "https://github.com/settings/tokens/new?scopes=repo,workflow&description=DEVWEBIA", label: "Générer un token GitHub" }}
+            docLink={{
+              href: "https://github.com/settings/tokens/new?scopes=repo,workflow&description=DEVWEBIA",
+              label: "Générer un token GitHub",
+            }}
           >
-            <Field label="Nom d'utilisateur GitHub" placeholder="ex: octocat" value={form.github_username} onChange={set("github_username")} />
-            <Field label="Personal Access Token (classic)" type="password" placeholder="ghp_..." value={form.github_token} onChange={set("github_token")} />
+            <Field
+              label="Nom d'utilisateur GitHub"
+              placeholder="ex: octocat"
+              value={form.github_username}
+              onChange={set("github_username")}
+            />
+            <Field
+              label="Personal Access Token (classic)"
+              type="password"
+              placeholder="ghp_..."
+              value={form.github_token}
+              onChange={set("github_token")}
+            />
             <Button
-              onClick={() => save("github", { github_token: form.github_token, github_username: form.github_username })}
+              onClick={() =>
+                save("github", {
+                  github_token: form.github_token,
+                  github_username: form.github_username,
+                })
+              }
               disabled={saving === "github" || !form.github_token}
             >
               {saving === "github" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
@@ -126,10 +150,26 @@ function Connections() {
             description="Déploiement automatique de vos sites en un clic depuis DEVWEBIA."
             docLink={{ href: "https://vercel.com/account/tokens", label: "Créer un token Vercel" }}
           >
-            <Field label="Vercel Access Token" type="password" placeholder="vercel_..." value={form.vercel_token} onChange={set("vercel_token")} />
-            <Field label="Team ID (optionnel)" placeholder="team_..." value={form.vercel_team_id} onChange={set("vercel_team_id")} />
+            <Field
+              label="Vercel Access Token"
+              type="password"
+              placeholder="vercel_..."
+              value={form.vercel_token}
+              onChange={set("vercel_token")}
+            />
+            <Field
+              label="Team ID (optionnel)"
+              placeholder="team_..."
+              value={form.vercel_team_id}
+              onChange={set("vercel_team_id")}
+            />
             <Button
-              onClick={() => save("vercel", { vercel_token: form.vercel_token, vercel_team_id: form.vercel_team_id })}
+              onClick={() =>
+                save("vercel", {
+                  vercel_token: form.vercel_token,
+                  vercel_team_id: form.vercel_team_id,
+                })
+              }
               disabled={saving === "vercel" || !form.vercel_token}
             >
               {saving === "vercel" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
@@ -143,15 +183,28 @@ function Connections() {
             title="Firebase (Base de données & Auth)"
             connected={connected.firebase}
             description="Base de données Firestore, Stockage et Authentification connectés pour vos sites générés."
-            docLink={{ href: `https://console.firebase.google.com/project/${firebaseConfig.projectId}`, label: "Ouvrir la console Firebase" }}
+            docLink={{
+              href: `https://console.firebase.google.com/project/${firebaseConfig.projectId}`,
+              label: "Ouvrir la console Firebase",
+            }}
           >
             <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2 text-sm font-mono">
-              <div><span className="text-muted-foreground">Project ID:</span> {firebaseConfig.projectId}</div>
-              <div><span className="text-muted-foreground">Auth Domain:</span> {firebaseConfig.authDomain}</div>
-              <div><span className="text-muted-foreground">Firestore DB:</span> {firebaseConfig.firestoreDatabaseId}</div>
+              <div>
+                <span className="text-muted-foreground">Project ID:</span>{" "}
+                {firebaseConfig.projectId}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Auth Domain:</span>{" "}
+                {firebaseConfig.authDomain}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Firestore DB:</span>{" "}
+                {firebaseConfig.firestoreDatabaseId}
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Toutes les inscriptions et données de vos sites web générés sont stockées dans ce projet Firebase.
+              Toutes les inscriptions et données de vos sites web générés sont stockées dans ce
+              projet Firebase.
             </p>
           </IntegrationCard>
         </>
@@ -225,7 +278,13 @@ function Field({
   return (
     <div className="space-y-1.5">
       <Label className="text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
-      <Input type={type} value={value} onChange={onChange} placeholder={placeholder} autoComplete="off" />
+      <Input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete="off"
+      />
     </div>
   );
 }

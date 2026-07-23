@@ -10,7 +10,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Send, Loader2, Eye, Code, Download, Rocket, ExternalLink, CheckCircle2 } from "lucide-react";
+import { useI18n, type Language } from "@/lib/i18n";
+import {
+  Send,
+  Loader2,
+  Eye,
+  Code,
+  Download,
+  Rocket,
+  ExternalLink,
+  CheckCircle2,
+  Image as ImageIcon,
+  X,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import JSZip from "jszip";
 
@@ -76,7 +88,8 @@ function parseQuestionsFromMessage(content: string): { text: string; questions: 
   const m = content.match(/<!--DEVWEBIA_Q:([A-Za-z0-9+/=]+)-->/);
   if (!m) return { text: content, questions: [] };
   try {
-    const decoded = typeof atob === "function" ? atob(m[1]) : Buffer.from(m[1], "base64").toString("utf-8");
+    const decoded =
+      typeof atob === "function" ? atob(m[1]) : Buffer.from(m[1], "base64").toString("utf-8");
     const arr = JSON.parse(decoded) as Question[];
     return { text: content.replace(m[0], "").trim(), questions: arr };
   } catch {
@@ -85,10 +98,22 @@ function parseQuestionsFromMessage(content: string): { text: string; questions: 
 }
 
 function ProjectView() {
+  const { lang, changeLanguage, t } = useI18n();
   const { projectId } = Route.useParams();
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageBase64(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
   const [publishing, setPublishing] = useState(false);
   const [upToDate, setUpToDate] = useState(false);
   const [tab, setTab] = useState("chat");
@@ -133,9 +158,10 @@ function ProjectView() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const res = await generateSite({
-        data: { projectId, prompt: userPrompt },
+        data: { projectId, prompt: userPrompt, language: lang, imageBase64: imageBase64 || undefined },
         headers,
       });
+      setImageBase64(null);
       const entries = Object.entries(res.files || {});
       for (const [path, content] of entries) {
         const preview = content.slice(0, 600);
@@ -150,7 +176,8 @@ function ProjectView() {
       await queryClient.invalidateQueries();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("insufficient_credits")) toast.error("Crédits insuffisants — allez sur /credits");
+      if (msg.includes("insufficient_credits"))
+        toast.error("Crédits insuffisants — allez sur /credits");
       else toast.error(msg);
     } finally {
       setStreamFile(null);
@@ -248,17 +275,32 @@ function ProjectView() {
       <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col min-h-0">
         <div className="border-b border-border px-4 py-2 flex items-center justify-between gap-2">
           <TabsList>
-            <TabsTrigger value="chat">Chat</TabsTrigger>
-            <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1.5" />Vue site</TabsTrigger>
-            <TabsTrigger value="code"><Code className="h-4 w-4 mr-1.5" />Vue code</TabsTrigger>
+            <TabsTrigger value="chat">{t.appProject.chatTab}</TabsTrigger>
+            <TabsTrigger value="preview">
+              <Eye className="h-4 w-4 mr-1.5" />
+              {t.appProject.previewTab}
+            </TabsTrigger>
+            <TabsTrigger value="code">
+              <Code className="h-4 w-4 mr-1.5" />
+              {t.appProject.codeTab}
+            </TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
             {project.data?.vercel_url && (
-              <a href={project.data.vercel_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline px-2">
-                <ExternalLink className="h-3.5 w-3.5" />Site live
+              <a
+                href={project.data.vercel_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline px-2"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Site live
               </a>
             )}
-            <Button variant="outline" size="sm" onClick={download}><Download className="h-4 w-4 mr-1.5" />ZIP</Button>
+            <Button variant="outline" size="sm" onClick={download}>
+              <Download className="h-4 w-4 mr-1.5" />
+              ZIP
+            </Button>
             <Button
               size="sm"
               onClick={doPublish}
@@ -280,11 +322,21 @@ function ProjectView() {
         <TabsContent value="chat" className="flex-1 flex flex-col min-h-0 m-0">
           <div className="flex-1 overflow-auto p-4 space-y-4">
             {messages.data?.map((m) => {
-              const parsed = m.role === "assistant" ? parseQuestionsFromMessage(m.content) : { text: m.content, questions: [] };
+              const parsed =
+                m.role === "assistant"
+                  ? parseQuestionsFromMessage(m.content)
+                  : { text: m.content, questions: [] };
               return (
-                <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border"}`}>
-                    <div className="prose prose-sm prose-invert max-w-none [&>*]:my-1"><ReactMarkdown>{parsed.text}</ReactMarkdown></div>
+                <div
+                  key={m.id}
+                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border"}`}
+                  >
+                    <div className="prose prose-sm prose-invert max-w-none [&>*]:my-1">
+                      <ReactMarkdown>{parsed.text}</ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               );
@@ -300,26 +352,96 @@ function ProjectView() {
             <div ref={bottomRef} />
           </div>
           <div className="border-t border-border p-4 space-y-2">
-            <div className="rounded-xl border border-border bg-card flex items-end gap-2 p-2">
-              <Textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }}
-                placeholder="Décrivez une modification..."
-                rows={2}
-                className="border-0 bg-transparent focus-visible:ring-0 resize-none"
-                disabled={loading}
-              />
-              <Button onClick={submit} disabled={loading || !prompt.trim()} size="icon">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">{t.appProject.aiLang}</span>
+                <select
+                  value={lang}
+                  onChange={(e) => changeLanguage(e.target.value as Language)}
+                  className="text-xs bg-background border border-border rounded-lg px-2.5 py-1 font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  <option value="fr">{t.common.fr}</option>
+                  <option value="mg">{t.common.mg}</option>
+                  <option value="en">{t.common.en}</option>
+                  <option value="zh">{t.common.zh}</option>
+                  <option value="it">{t.common.it}</option>
+                </select>
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-2 space-y-2">
+              {imageBase64 && (
+                <div className="relative inline-block ml-1">
+                  <img
+                    src={imageBase64}
+                    alt="Inspiration"
+                    className="h-16 w-auto object-contain rounded-lg border border-border bg-background p-1 shadow"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImageBase64(null)}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow hover:bg-destructive/80"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              <div className="flex items-end gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Téléverser une image de référence ou maquette pour l'IA"
+                >
+                  <ImageIcon className="h-5 w-5" />
+                </Button>
+                <Textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
+                  }}
+                  placeholder={
+                    imageBase64
+                      ? t.appIndex.promptPlaceholderImage
+                      : t.appProject.modifyPromptPlaceholder
+                  }
+                  rows={2}
+                  className="border-0 bg-transparent focus-visible:ring-0 resize-none py-2"
+                  disabled={loading}
+                />
+                <Button
+                  onClick={submit}
+                  disabled={loading || (!prompt.trim() && !imageBase64)}
+                  size="icon"
+                  className="shrink-0"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
             <div className="flex justify-center">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={loading}
-                onClick={() => runGenerate("Continue la génération là où tu t'es arrêté. Ne repose pas de questions. Renvoie TOUS les fichiers complets et à jour (index.html, script.js, firebase.js, admin.html, admin.js + tout autre).")}
+                onClick={() =>
+                  runGenerate(
+                    "Continue la génération là où tu t'es arrêté. Ne repose pas de questions. Renvoie TOUS les fichiers complets et à jour (index.html, script.js, firebase.js, admin.html, admin.js + tout autre).",
+                  )
+                }
               >
                 {loading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
                 Continuer la génération
@@ -329,13 +451,20 @@ function ProjectView() {
         </TabsContent>
 
         <TabsContent value="preview" className="flex-1 m-0 bg-white">
-          <iframe title="preview" srcDoc={fullHtml} className="w-full h-full border-0" sandbox="allow-scripts" />
+          <iframe
+            title="preview"
+            srcDoc={fullHtml}
+            className="w-full h-full border-0"
+            sandbox="allow-scripts"
+          />
         </TabsContent>
 
         <TabsContent value="code" className="flex-1 m-0 overflow-auto">
           <div className="p-4 space-y-4">
             {filePaths.length === 0 && (
-              <p className="text-sm text-muted-foreground">Aucun fichier — envoyez un prompt pour générer le site.</p>
+              <p className="text-sm text-muted-foreground">
+                Aucun fichier — envoyez un prompt pour générer le site.
+              </p>
             )}
             {filePaths.map((path) => (
               <CodeBlock key={path} title={path} code={filesMap[path]} />
@@ -347,7 +476,13 @@ function ProjectView() {
   );
 }
 
-function QuizCard({ questions, onSubmit }: { questions: Question[]; onSubmit: (answers: string) => void }) {
+function QuizCard({
+  questions,
+  onSubmit,
+}: {
+  questions: Question[];
+  onSubmit: (answers: string) => void;
+}) {
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<string[][]>(() => questions.map(() => []));
   const [freeText, setFreeText] = useState<string[]>(() => questions.map(() => ""));
@@ -400,13 +535,20 @@ function QuizCard({ questions, onSubmit }: { questions: Question[]; onSubmit: (a
               return (
                 <div key={i} className="rounded-lg bg-muted/40 p-2.5">
                   <div className="text-xs text-muted-foreground">{q.q}</div>
-                  <div className="mt-1 font-medium">{answers.length ? answers.join(" · ") : "—"}</div>
+                  <div className="mt-1 font-medium">
+                    {answers.length ? answers.join(" · ") : "—"}
+                  </div>
                 </div>
               );
             })}
           </div>
           <div className="flex justify-between pt-2">
-            <Button variant="ghost" size="sm" onClick={() => setStep(total - 1)} disabled={submitted}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStep(total - 1)}
+              disabled={submitted}
+            >
               Retour
             </Button>
             <Button onClick={handleSubmit} disabled={submitted}>
@@ -424,9 +566,14 @@ function QuizCard({ questions, onSubmit }: { questions: Question[]; onSubmit: (a
     <div className="flex justify-start">
       <div className="w-full max-w-[90%] rounded-2xl bg-card border border-border p-4 space-y-3 animate-in fade-in slide-in-from-bottom-2">
         <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">Question {step + 1} / {total}</div>
+          <div className="text-xs text-muted-foreground">
+            Question {step + 1} / {total}
+          </div>
           <div className="h-1 w-24 rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-primary transition-all" style={{ width: `${((step + 1) / total) * 100}%` }} />
+            <div
+              className="h-full bg-primary transition-all"
+              style={{ width: `${((step + 1) / total) * 100}%` }}
+            />
           </div>
         </div>
         <div className="text-sm font-semibold">{q.q}</div>
@@ -440,13 +587,19 @@ function QuizCard({ questions, onSubmit }: { questions: Question[]; onSubmit: (a
                   checked ? "border-primary bg-primary/5" : "border-border hover:bg-accent/40"
                 }`}
               >
-                <Checkbox checked={checked} onCheckedChange={() => toggle(opt)} className="mt-0.5" />
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={() => toggle(opt)}
+                  className="mt-0.5"
+                />
                 <span className="text-sm">{opt}</span>
               </label>
             );
           })}
           <div className="rounded-lg border border-dashed border-border p-2.5">
-            <div className="text-xs text-muted-foreground mb-1.5">Réponse libre (optionnel — texte, lien, précision…)</div>
+            <div className="text-xs text-muted-foreground mb-1.5">
+              Réponse libre (optionnel — texte, lien, précision…)
+            </div>
             <Textarea
               value={freeText[step]}
               onChange={(e) => {
@@ -460,7 +613,12 @@ function QuizCard({ questions, onSubmit }: { questions: Question[]; onSubmit: (a
           </div>
         </div>
         <div className="flex justify-between pt-1">
-          <Button variant="ghost" size="sm" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setStep((s) => Math.max(0, s - 1))}
+            disabled={step === 0}
+          >
             Précédent
           </Button>
           {isLast ? (
@@ -487,9 +645,18 @@ function languageOf(path: string): string {
   return "Fichier";
 }
 
-function GeneratingAnimation({ streamFile }: { streamFile: { path: string; content: string } | null }) {
+function GeneratingAnimation({
+  streamFile,
+}: {
+  streamFile: { path: string; content: string } | null;
+}) {
   const [step, setStep] = useState(0);
-  const steps = ["Analyse de votre demande…", "Conception de la palette et de la typographie…", "Structure des sections…", "Génération avec Tailwind CSS v4…"];
+  const steps = [
+    "Analyse de votre demande…",
+    "Conception de la palette et de la typographie…",
+    "Structure des sections…",
+    "Génération avec Tailwind CSS v4…",
+  ];
   useEffect(() => {
     if (streamFile) return;
     const id = setInterval(() => setStep((s) => (s + 1) % steps.length), 1600);
@@ -541,9 +708,20 @@ function CodeBlock({ title, code }: { title: string; code: string }) {
     <div className="rounded-xl border border-border overflow-hidden">
       <div className="bg-muted px-4 py-2 text-xs font-mono flex justify-between items-center">
         <span>{title}</span>
-        <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(code); toast.success("Copié"); }}>Copier</Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            navigator.clipboard.writeText(code);
+            toast.success("Copié");
+          }}
+        >
+          Copier
+        </Button>
       </div>
-      <pre className="bg-card p-4 text-xs overflow-auto max-h-96"><code>{code || "// vide"}</code></pre>
+      <pre className="bg-card p-4 text-xs overflow-auto max-h-96">
+        <code>{code || "// vide"}</code>
+      </pre>
     </div>
   );
 }

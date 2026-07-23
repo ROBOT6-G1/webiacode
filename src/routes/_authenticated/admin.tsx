@@ -1,6 +1,15 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { auth, db, getAuthToken } from "@/integrations/firebase/client";
-import { doc, getDoc, collection, query, getDocs, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  addDoc,
+} from "firebase/firestore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { approvePayment } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
@@ -8,7 +17,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Shield, Check, X, Key, Users as UsersIcon, MessageSquare, ShieldAlert, Smartphone, MapPin, Lock, Unlock, AlertTriangle } from "lucide-react";
+import {
+  Shield,
+  Check,
+  X,
+  Key,
+  Users as UsersIcon,
+  MessageSquare,
+  ShieldAlert,
+  Smartphone,
+  MapPin,
+  Lock,
+  Unlock,
+  AlertTriangle,
+} from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -16,8 +38,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
     const user = auth.currentUser;
     if (!user) throw redirect({ to: "/auth" });
     const isSuperAdminEmail =
-      user.email === "horlandobe@gmail.com" ||
-      user.email === "boutiquemevasoa@gmail.com";
+      user.email === "horlandobe@gmail.com" || user.email === "boutiquemevasoa@gmail.com";
     if (isSuperAdminEmail) return;
 
     const snap = await getDoc(doc(db, "user_roles", user.uid));
@@ -29,7 +50,10 @@ export const Route = createFileRoute("/_authenticated/admin")({
 function Admin() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold flex items-center gap-2"><Shield className="h-8 w-8 text-primary" />Administration</h1>
+      <h1 className="text-3xl font-bold flex items-center gap-2">
+        <Shield className="h-8 w-8 text-primary" />
+        Administration
+      </h1>
       <Tabs defaultValue="payments">
         <TabsList>
           <TabsTrigger value="payments">Paiements</TabsTrigger>
@@ -38,11 +62,21 @@ function Admin() {
           <TabsTrigger value="keys">Clés IA</TabsTrigger>
           <TabsTrigger value="tickets">Support</TabsTrigger>
         </TabsList>
-        <TabsContent value="payments"><PaymentsTab /></TabsContent>
-        <TabsContent value="users"><UsersTab /></TabsContent>
-        <TabsContent value="security"><SecurityTab /></TabsContent>
-        <TabsContent value="keys"><KeysTab /></TabsContent>
-        <TabsContent value="tickets"><TicketsTab /></TabsContent>
+        <TabsContent value="payments">
+          <PaymentsTab />
+        </TabsContent>
+        <TabsContent value="users">
+          <UsersTab />
+        </TabsContent>
+        <TabsContent value="security">
+          <SecurityTab />
+        </TabsContent>
+        <TabsContent value="keys">
+          <KeysTab />
+        </TabsContent>
+        <TabsContent value="tickets">
+          <TicketsTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -76,22 +110,37 @@ function PaymentsTab() {
       await approvePayment({ data: { paymentId: id, action: status }, headers });
       toast.success(`Paiement ${status}`);
       queryClient.invalidateQueries();
-    } catch (err) { toast.error(err instanceof Error ? err.message : String(err)); }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
   };
   return (
     <div className="space-y-3 mt-4">
       {q.data?.length === 0 && <p className="text-sm text-muted-foreground">Aucun paiement.</p>}
       {q.data?.map((p) => (
-        <div key={p.id} className="rounded-lg border border-border bg-card p-4 flex items-center justify-between gap-4">
+        <div
+          key={p.id}
+          className="rounded-lg border border-border bg-card p-4 flex items-center justify-between gap-4"
+        >
           <div className="min-w-0">
-            <p className="font-semibold">{p.amount_ar.toLocaleString()} Ar — {p.credits} crédits ({p.kind})</p>
-            <p className="text-xs text-muted-foreground">Réf {p.reference} · {new Date(p.created_at).toLocaleString("fr-FR")}</p>
-            <p className="text-xs text-muted-foreground">Statut: <span className="font-semibold">{p.status}</span></p>
+            <p className="font-semibold">
+              {p.amount_ar.toLocaleString()} Ar — {p.credits} crédits ({p.kind})
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Réf {p.reference} · {new Date(p.created_at).toLocaleString("fr-FR")}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Statut: <span className="font-semibold">{p.status}</span>
+            </p>
           </div>
           {p.status === "pending" && (
             <div className="flex gap-2 shrink-0">
-              <Button size="sm" onClick={() => act(p.id, "validated")}><Check className="h-4 w-4" /></Button>
-              <Button size="sm" variant="destructive" onClick={() => act(p.id, "rejected")}><X className="h-4 w-4" /></Button>
+              <Button size="sm" onClick={() => act(p.id, "validated")}>
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => act(p.id, "rejected")}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           )}
         </div>
@@ -154,10 +203,16 @@ function UsersTab() {
       {q.data?.map((u) => {
         const isSuspended = u.status === "suspended" || u.is_suspended === true;
         return (
-          <div key={u.id} className="rounded-xl border border-border bg-card p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-sm shadow-sm">
+          <div
+            key={u.id}
+            className="rounded-xl border border-border bg-card p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-sm shadow-sm"
+          >
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold flex items-center gap-1.5"><UsersIcon className="h-4 w-4 text-primary" />{u.display_name ?? u.email}</span>
+                <span className="font-bold flex items-center gap-1.5">
+                  <UsersIcon className="h-4 w-4 text-primary" />
+                  {u.display_name ?? u.email}
+                </span>
                 {isSuspended ? (
                   <span className="text-xs bg-destructive/10 text-destructive border border-destructive/20 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                     <Lock className="h-3 w-3" /> Suspendu
@@ -167,17 +222,29 @@ function UsersTab() {
                     Actif
                   </span>
                 )}
-                {u.plan === "pro" && <span className="text-xs bg-accent/20 text-accent border border-accent/40 font-bold px-2 py-0.5 rounded-full">PRO</span>}
+                {u.plan === "pro" && (
+                  <span className="text-xs bg-accent/20 text-accent border border-accent/40 font-bold px-2 py-0.5 rounded-full">
+                    PRO
+                  </span>
+                )}
               </div>
 
-              <p className="text-xs text-muted-foreground truncate">{u.email} · ID: <span className="font-mono">{u.id}</span></p>
+              <p className="text-xs text-muted-foreground truncate">
+                {u.email} · ID: <span className="font-mono">{u.id}</span>
+              </p>
 
               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1">
                 {u.device_id && (
-                  <span className="flex items-center gap-1"><Smartphone className="h-3 w-3" /> Appareil : <strong className="font-mono">{u.device_id}</strong></span>
+                  <span className="flex items-center gap-1">
+                    <Smartphone className="h-3 w-3" /> Appareil :{" "}
+                    <strong className="font-mono">{u.device_id}</strong>
+                  </span>
                 )}
                 {u.last_location?.latitude && (
-                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-emerald-500" /> Pos : {u.last_location.latitude.toFixed(4)}, {u.last_location.longitude?.toFixed(4)}</span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-emerald-500" /> Pos :{" "}
+                    {u.last_location.latitude.toFixed(4)}, {u.last_location.longitude?.toFixed(4)}
+                  </span>
                 )}
               </div>
             </div>
@@ -272,7 +339,9 @@ function SecurityTab() {
             Incidents Multi-Comptes Détectés
           </p>
           <p className="text-3xl font-extrabold">{logsQuery.data?.length ?? 0}</p>
-          <p className="text-xs text-muted-foreground">Comptes antérieurs automatiquement suspendus sur le même appareil</p>
+          <p className="text-xs text-muted-foreground">
+            Comptes antérieurs automatiquement suspendus sur le même appareil
+          </p>
         </div>
 
         <div className="p-4 rounded-xl border border-border bg-card space-y-1">
@@ -281,7 +350,9 @@ function SecurityTab() {
             Appareils Uniques Enregistrés
           </p>
           <p className="text-3xl font-extrabold">{devicesQuery.data?.length ?? 0}</p>
-          <p className="text-xs text-muted-foreground">Empreintes d'appareils suivies par Firebase</p>
+          <p className="text-xs text-muted-foreground">
+            Empreintes d'appareils suivies par Firebase
+          </p>
         </div>
       </div>
 
@@ -292,20 +363,25 @@ function SecurityTab() {
           Journal d'Audit des Suspensions Automatiques ({logsQuery.data?.length ?? 0})
         </h3>
 
-        {(!logsQuery.data || logsQuery.data.length === 0) ? (
+        {!logsQuery.data || logsQuery.data.length === 0 ? (
           <div className="p-6 text-center border border-dashed border-border rounded-xl text-muted-foreground text-sm">
             Aucun incident de multi-compte enregistré pour le moment.
           </div>
         ) : (
           <div className="space-y-3">
             {logsQuery.data.map((log) => (
-              <div key={log.id} className="p-4 rounded-xl border border-border bg-card space-y-2 text-sm shadow-sm">
+              <div
+                key={log.id}
+                className="p-4 rounded-xl border border-border bg-card space-y-2 text-sm shadow-sm"
+              >
                 <div className="flex justify-between items-start gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
                     <span className="bg-destructive/10 text-destructive text-xs font-bold px-2.5 py-1 rounded-full border border-destructive/20 flex items-center gap-1">
                       <Lock className="h-3 w-3" /> Multi-compte Bloqué
                     </span>
-                    <span className="font-mono text-xs text-muted-foreground">ID Appareil : {log.device_id}</span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      ID Appareil : {log.device_id}
+                    </span>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {log.created_at ? new Date(log.created_at).toLocaleString("fr-FR") : ""}
@@ -319,7 +395,9 @@ function SecurityTab() {
                   </div>
                   <div className="p-2 bg-destructive/10 rounded-lg border border-destructive/20">
                     <p className="font-bold text-destructive mb-0.5">Ancien Compte Suspendu :</p>
-                    <p className="font-mono text-foreground">{log.suspended_user_email || log.suspended_user_id}</p>
+                    <p className="font-mono text-foreground">
+                      {log.suspended_user_email || log.suspended_user_id}
+                    </p>
                   </div>
                 </div>
 
@@ -327,7 +405,8 @@ function SecurityTab() {
                   {log.location?.latitude && (
                     <span className="flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5 text-primary" />
-                      Géolocalisation : {log.location.latitude.toFixed(4)}, {log.location.longitude?.toFixed(4)}
+                      Géolocalisation : {log.location.latitude.toFixed(4)},{" "}
+                      {log.location.longitude?.toFixed(4)}
                     </span>
                   )}
                   {log.device_info?.platform && (
@@ -347,16 +426,66 @@ function SecurityTab() {
 }
 
 const PROVIDERS: Array<{ id: string; label: string; model: string; url: string }> = [
-  { id: "google", label: "Google Gemini (AI Studio)", model: "gemini-flash-latest (auto)", url: "https://aistudio.google.com/apikey" },
-  { id: "groq", label: "Groq Cloud", model: "llama-3.3-70b-versatile (auto)", url: "https://console.groq.com/keys" },
-  { id: "openrouter", label: "OpenRouter (modèles :free)", model: "llama-3.3-70b-instruct:free (auto)", url: "https://openrouter.ai/settings/keys" },
-  { id: "mistral", label: "Mistral AI (La Plateforme)", model: "mistral-small-latest (auto)", url: "https://console.mistral.ai/api-keys" },
-  { id: "cohere", label: "Cohere (trial gratuit)", model: "command-r-08-2024 (auto)", url: "https://dashboard.cohere.com/api-keys" },
-  { id: "together", label: "Together AI (modèles Free)", model: "Llama-3.3-70B-Instruct-Turbo-Free (auto)", url: "https://api.together.ai/settings/api-keys" },
-  { id: "cerebras", label: "Cerebras Cloud", model: "llama-3.3-70b (auto)", url: "https://cloud.cerebras.ai/platform" },
-  { id: "sambanova", label: "SambaNova Cloud", model: "Meta-Llama-3.3-70B-Instruct (auto)", url: "https://cloud.sambanova.ai/apis" },
-  { id: "nvidia", label: "NVIDIA NIM", model: "llama-3.3-70b-instruct (auto)", url: "https://build.nvidia.com/explore/discover" },
-  { id: "huggingface", label: "Hugging Face Inference", model: "Llama-3.3-70B-Instruct (auto)", url: "https://huggingface.co/settings/tokens" },
+  {
+    id: "google",
+    label: "Google Gemini (AI Studio)",
+    model: "gemini-flash-latest (auto)",
+    url: "https://aistudio.google.com/apikey",
+  },
+  {
+    id: "groq",
+    label: "Groq Cloud",
+    model: "llama-3.3-70b-versatile (auto)",
+    url: "https://console.groq.com/keys",
+  },
+  {
+    id: "openrouter",
+    label: "OpenRouter (modèles :free)",
+    model: "llama-3.3-70b-instruct:free (auto)",
+    url: "https://openrouter.ai/settings/keys",
+  },
+  {
+    id: "mistral",
+    label: "Mistral AI (La Plateforme)",
+    model: "mistral-small-latest (auto)",
+    url: "https://console.mistral.ai/api-keys",
+  },
+  {
+    id: "cohere",
+    label: "Cohere (trial gratuit)",
+    model: "command-r-08-2024 (auto)",
+    url: "https://dashboard.cohere.com/api-keys",
+  },
+  {
+    id: "together",
+    label: "Together AI (modèles Free)",
+    model: "Llama-3.3-70B-Instruct-Turbo-Free (auto)",
+    url: "https://api.together.ai/settings/api-keys",
+  },
+  {
+    id: "cerebras",
+    label: "Cerebras Cloud",
+    model: "llama-3.3-70b (auto)",
+    url: "https://cloud.cerebras.ai/platform",
+  },
+  {
+    id: "sambanova",
+    label: "SambaNova Cloud",
+    model: "Meta-Llama-3.3-70B-Instruct (auto)",
+    url: "https://cloud.sambanova.ai/apis",
+  },
+  {
+    id: "nvidia",
+    label: "NVIDIA NIM",
+    model: "llama-3.3-70b-instruct (auto)",
+    url: "https://build.nvidia.com/explore/discover",
+  },
+  {
+    id: "huggingface",
+    label: "Hugging Face Inference",
+    model: "Llama-3.3-70B-Instruct (auto)",
+    url: "https://huggingface.co/settings/tokens",
+  },
 ];
 
 function KeysTab() {
@@ -396,7 +525,10 @@ function KeysTab() {
         tokens_used: 0,
         created_at: new Date().toISOString(),
       });
-      toast.success("Clé ajoutée"); setLabel(""); setKey(""); queryClient.invalidateQueries();
+      toast.success("Clé ajoutée");
+      setLabel("");
+      setKey("");
+      queryClient.invalidateQueries();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erreur");
     }
@@ -413,7 +545,10 @@ function KeysTab() {
   return (
     <div className="space-y-4 mt-4">
       <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-        <p className="font-semibold flex items-center gap-2"><Key className="h-4 w-4" />Ajouter une clé API IA</p>
+        <p className="font-semibold flex items-center gap-2">
+          <Key className="h-4 w-4" />
+          Ajouter une clé API IA
+        </p>
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
             <label className="text-xs text-muted-foreground">Fournisseur</label>
@@ -423,7 +558,9 @@ function KeysTab() {
               onChange={(e) => setProvider(e.target.value)}
             >
               {PROVIDERS.map((p) => (
-                <option key={p.id} value={p.id}>{p.label}</option>
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
               ))}
             </select>
             <p className="text-xs text-muted-foreground mt-1">Modèle : {current.model}</p>
@@ -440,28 +577,54 @@ function KeysTab() {
             </a>
           </div>
         </div>
-        <Input placeholder="Label (ex: key-1)" value={label} onChange={(e) => setLabel(e.target.value)} />
-        <Input placeholder="Clé API..." value={key} onChange={(e) => setKey(e.target.value)} type="password" />
+        <Input
+          placeholder="Label (ex: key-1)"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+        />
+        <Input
+          placeholder="Clé API..."
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          type="password"
+        />
         <Button onClick={add}>Ajouter</Button>
       </div>
       <div className="space-y-2">
         {q.data?.map((k) => (
-          <div key={k.id} className="rounded-lg border border-border bg-card p-3 flex items-center justify-between gap-4 text-sm">
+          <div
+            key={k.id}
+            className="rounded-lg border border-border bg-card p-3 flex items-center justify-between gap-4 text-sm"
+          >
             <div className="min-w-0">
               <p className="font-semibold truncate">
                 {k.label}{" "}
                 <span className="text-xs font-normal text-muted-foreground">
-                  ({PROVIDERS.find((p) => p.id === (k.provider ?? "google"))?.label ?? k.provider ?? "google"})
+                  (
+                  {PROVIDERS.find((p) => p.id === (k.provider ?? "google"))?.label ??
+                    k.provider ??
+                    "google"}
+                  )
                 </span>
               </p>
-              <p className="text-xs text-muted-foreground font-mono">{k.key_value.slice(0, 8)}...{k.key_value.slice(-4)}</p>
-              <p className="text-xs text-muted-foreground">Requêtes: {k.request_count || 0} · Tokens: {k.tokens_used ?? 0}</p>
+              <p className="text-xs text-muted-foreground font-mono">
+                {k.key_value.slice(0, 8)}...{k.key_value.slice(-4)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Requêtes: {k.request_count || 0} · Tokens: {k.tokens_used ?? 0}
+              </p>
             </div>
             <div className="flex gap-2 shrink-0">
-              <Button size="sm" variant={k.active ? "default" : "outline"} onClick={() => toggle(k.id, k.active)}>
+              <Button
+                size="sm"
+                variant={k.active ? "default" : "outline"}
+                onClick={() => toggle(k.id, k.active)}
+              >
                 {k.active ? "Active" : "Inactive"}
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => del(k.id)}><X className="h-4 w-4" /></Button>
+              <Button size="sm" variant="destructive" onClick={() => del(k.id)}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         ))}
@@ -504,7 +667,10 @@ function TicketsTab() {
       {q.data?.map((t) => (
         <div key={t.id} className="rounded-lg border border-border bg-card p-4 space-y-2">
           <div className="flex justify-between items-start">
-            <p className="text-xs text-muted-foreground flex items-center gap-1"><MessageSquare className="h-3 w-3" />{new Date(t.created_at).toLocaleString("fr-FR")}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              {new Date(t.created_at).toLocaleString("fr-FR")}
+            </p>
             <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{t.status}</span>
           </div>
           <p className="text-sm whitespace-pre-wrap">{t.message}</p>
@@ -512,7 +678,12 @@ function TicketsTab() {
             <p className="text-sm text-primary border-l-2 border-primary pl-3">{t.admin_reply}</p>
           ) : (
             <div className="flex gap-2">
-              <Textarea rows={2} placeholder="Votre réponse..." value={reply[t.id] ?? ""} onChange={(e) => setReply({ ...reply, [t.id]: e.target.value })} />
+              <Textarea
+                rows={2}
+                placeholder="Votre réponse..."
+                value={reply[t.id] ?? ""}
+                onChange={(e) => setReply({ ...reply, [t.id]: e.target.value })}
+              />
               <Button onClick={() => send(t.id)}>Envoyer</Button>
             </div>
           )}

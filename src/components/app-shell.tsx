@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useI18n, type Language } from "@/lib/i18n";
 import {
   Sidebar,
   SidebarContent,
@@ -15,7 +16,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { auth, firebaseSignOut, db } from "@/integrations/firebase/client";
-import { doc, getDoc, collection, query, where, getDocs, orderBy, limit as limitQuery } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Sparkles,
@@ -35,9 +43,11 @@ import {
   Smartphone,
   MapPin,
   Lock,
+  Info,
 } from "lucide-react";
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const { lang, changeLanguage, t } = useI18n();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const queryClient = useQueryClient();
@@ -53,8 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       const roleSnap = await getDoc(doc(db, "user_roles", user.uid));
       const isAdminRole = roleSnap.exists() && roleSnap.data()?.role === "admin";
       const isSuperAdminEmail =
-        user.email === "horlandobe@gmail.com" ||
-        user.email === "boutiquemevasoa@gmail.com";
+        user.email === "horlandobe@gmail.com" || user.email === "boutiquemevasoa@gmail.com";
       const isAdmin = isAdminRole || isSuperAdminEmail;
       return { ...profileData, isAdmin };
     },
@@ -65,12 +74,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     queryFn: async () => {
       const user = auth.currentUser;
       if (!user) return [];
-      const q = query(
-        collection(db, "projects"),
-        where("user_id", "==", user.uid)
-      );
+      const q = query(collection(db, "projects"), where("user_id", "==", user.uid));
       const snap = await getDocs(q);
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Array<{ id: string; name: string; updated_at?: string }>;
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Array<{
+        id: string;
+        name: string;
+        updated_at?: string;
+      }>;
       list.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""));
       return list.slice(0, 30);
     },
@@ -84,14 +94,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   const nav = [
-    { title: "Chat", url: "/app" as const, icon: MessageSquare },
-    { title: "Recharger crédits", url: "/credits" as const, icon: CreditCard },
-    { title: "Ma clé IA", url: "/ai-settings" as const, icon: BrainCircuit },
-    { title: "Applications", url: "/connections" as const, icon: Plug },
-    { title: "FAQ", url: "/faq" as const, icon: HelpCircle },
-    { title: "Support client", url: "/support" as const, icon: Headphones },
-    { title: "Parrainage", url: "/referrals" as const, icon: Users },
-    { title: "Domaine", url: "/domain" as const, icon: Globe },
+    { title: t.nav.chat, url: "/app" as const, icon: MessageSquare },
+    { title: t.nav.credits, url: "/credits" as const, icon: CreditCard },
+    { title: t.nav.aiKey, url: "/ai-settings" as const, icon: BrainCircuit },
+    { title: t.nav.apps, url: "/connections" as const, icon: Plug },
+    { title: t.nav.faq, url: "/faq" as const, icon: HelpCircle },
+    { title: t.nav.support, url: "/support" as const, icon: Headphones },
+    { title: t.nav.referrals, url: "/referrals" as const, icon: Users },
+    { title: t.nav.domain, url: "/domain" as const, icon: Globe },
+    { title: t.nav.about, url: "/apropos" as const, icon: Info },
   ];
 
   // Check if current user is suspended for multi-account violations
@@ -108,7 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div>
             <h2 className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
               <Lock className="h-5 w-5 text-destructive" />
-              Compte Suspendu
+              {t.nav.accountSuspended}
             </h2>
             <p className="text-sm text-muted-foreground mt-2">
               {profile.data?.suspension_reason ||
@@ -118,24 +129,32 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div className="bg-muted/50 p-4 rounded-xl text-left space-y-2 text-xs font-mono border border-border">
             <p className="flex items-center justify-between text-muted-foreground">
-              <span className="flex items-center gap-1"><Smartphone className="h-3.5 w-3.5" /> Appareil :</span>
-              <span className="text-foreground font-semibold">{profile.data?.device_id || "Détecté"}</span>
+              <span className="flex items-center gap-1">
+                <Smartphone className="h-3.5 w-3.5" /> {t.nav.device} :
+              </span>
+              <span className="text-foreground font-semibold">
+                {profile.data?.device_id || "Détecté"}
+              </span>
             </p>
             {profile.data?.suspended_at && (
               <p className="flex items-center justify-between text-muted-foreground">
-                <span>Date suspension :</span>
-                <span className="text-foreground">{new Date(profile.data.suspended_at).toLocaleString("fr-FR")}</span>
+                <span>{t.nav.suspensionDate} :</span>
+                <span className="text-foreground">
+                  {new Date(profile.data.suspended_at).toLocaleString("fr-FR")}
+                </span>
               </p>
             )}
             <p className="flex items-center justify-between text-muted-foreground">
-              <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Statut Sécurité :</span>
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" /> {t.nav.securityStatus} :
+              </span>
               <span className="text-destructive font-semibold">Firebase Security Enforced</span>
             </p>
           </div>
 
           <Button variant="destructive" className="w-full font-bold" onClick={signOut}>
             <LogOut className="h-4 w-4 mr-2" />
-            Se Déconnecter
+            {t.nav.logout}
           </Button>
         </div>
       </div>
@@ -151,12 +170,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <span className="text-base font-bold tracking-tight group-data-[collapsible=icon]:hidden">DEVWEBIA</span>
+              <span className="text-base font-bold tracking-tight group-data-[collapsible=icon]:hidden">
+                DEVWEBIA
+              </span>
             </Link>
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel>Menu</SidebarGroupLabel>
+              <SidebarGroupLabel>{t.nav.menu}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {nav.map((item) => (
@@ -172,7 +193,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                   {profile.data?.isAdmin && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname.startsWith("/admin")}>
-                        <Link to="/admin"><Shield className="h-4 w-4" /><span>Admin</span></Link>
+                        <Link to="/admin">
+                          <Shield className="h-4 w-4" />
+                          <span>{t.nav.admin}</span>
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -181,12 +205,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SidebarGroup>
 
             <SidebarGroup>
-              <SidebarGroupLabel>Historique projets</SidebarGroupLabel>
+              <SidebarGroupLabel>{t.nav.history}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <Link to="/app"><Plus className="h-4 w-4" /><span>Nouveau projet</span></Link>
+                      <Link to="/app">
+                        <Plus className="h-4 w-4" />
+                        <span>{t.nav.newProject}</span>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   {projects.data?.map((p) => (
@@ -205,7 +232,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </SidebarContent>
           <div className="p-2 border-t border-sidebar-border">
             <Button variant="ghost" size="sm" className="w-full justify-start" onClick={signOut}>
-              <LogOut className="h-4 w-4 mr-2" /><span className="group-data-[collapsible=icon]:hidden">Se déconnecter</span>
+              <LogOut className="h-4 w-4 mr-2" />
+              <span className="group-data-[collapsible=icon]:hidden">{t.nav.logout}</span>
             </Button>
           </div>
         </Sidebar>
@@ -217,10 +245,36 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/30 px-3 py-1 text-sm">
                 <Coins className="h-4 w-4 text-primary" />
                 <span className="font-semibold text-primary">{profile.data?.credits ?? 0}</span>
-                <span className="text-muted-foreground text-xs">crédits WEB IA</span>
+                <span className="text-muted-foreground text-xs">{t.nav.creditsLabel}</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full bg-secondary/80 border border-border px-2.5 py-1 text-xs font-medium">
+                <Globe className="h-3.5 w-3.5 text-primary" />
+                <select
+                  value={lang}
+                  onChange={(e) => changeLanguage(e.target.value as Language)}
+                  className="bg-transparent border-0 text-foreground font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="fr" className="bg-card text-foreground">
+                    {t.common.fr}
+                  </option>
+                  <option value="mg" className="bg-card text-foreground">
+                    {t.common.mg}
+                  </option>
+                  <option value="en" className="bg-card text-foreground">
+                    {t.common.en}
+                  </option>
+                  <option value="zh" className="bg-card text-foreground">
+                    {t.common.zh}
+                  </option>
+                  <option value="it" className="bg-card text-foreground">
+                    {t.common.it}
+                  </option>
+                </select>
               </div>
               {profile.data?.plan === "pro" && (
-                <span className="rounded-full bg-accent/20 border border-accent/40 px-3 py-1 text-xs font-semibold text-accent">PRO</span>
+                <span className="rounded-full bg-accent/20 border border-accent/40 px-3 py-1 text-xs font-semibold text-accent">
+                  PRO
+                </span>
               )}
             </div>
           </header>

@@ -11,12 +11,14 @@ export const Route = createFileRoute("/")({
       { title: "DEVWEBIA — Générateur de sites IA" },
       {
         name: "description",
-        content: "Créez, prévisualisez et publiez des sites web complets avec DEVWEBIA et son backend automatisé.",
+        content:
+          "Créez, prévisualisez et publiez des sites web complets avec DEVWEBIA et son backend automatisé.",
       },
       { property: "og:title", content: "DEVWEBIA — Générateur de sites IA" },
       {
         property: "og:description",
-        content: "Générez des sites avec administration, stockage et configuration backend automatisée.",
+        content:
+          "Générez des sites avec administration, stockage et configuration backend automatisée.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -51,8 +53,14 @@ function Landing() {
             <span className="text-lg font-bold tracking-tight">DEVWEBIA</span>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="ghost"><Link to="/auth">Se connecter</Link></Button>
-            <Button asChild><Link to="/auth" search={{ mode: "signup" }}>Commencer gratuitement</Link></Button>
+            <Button asChild variant="ghost">
+              <Link to="/auth">Se connecter</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/auth" search={{ mode: "signup" }}>
+                Commencer gratuitement
+              </Link>
+            </Button>
           </div>
         </div>
       </header>
@@ -64,16 +72,27 @@ function Landing() {
           Powered by Gemini AI
         </div>
         <h1 className="mt-6 text-5xl font-bold tracking-tight md:text-7xl">
-          Créez votre <span className="text-primary">site web</span><br />en discutant avec l'IA
+          Créez votre <span className="text-primary">site web</span>
+          <br />
+          en discutant avec l'IA
         </h1>
         <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
-          DEVWEBIA transforme vos idées en sites web complets. Discutez, prévisualisez, publiez sur Vercel — le tout depuis un seul endroit.
+          DEVWEBIA transforme vos idées en sites web complets. Discutez, prévisualisez, publiez sur
+          Vercel — le tout depuis un seul endroit.
         </p>
         <div className="mt-8 flex justify-center gap-3">
-          <Button size="lg" asChild><Link to="/auth" search={{ mode: "signup" }}>Créer un compte gratuit</Link></Button>
-          <Button size="lg" variant="outline" asChild><Link to="/auth">Se connecter</Link></Button>
+          <Button size="lg" asChild>
+            <Link to="/auth" search={{ mode: "signup" }}>
+              Créer un compte gratuit
+            </Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <Link to="/auth">Se connecter</Link>
+          </Button>
         </div>
-        <p className="mt-4 text-xs text-muted-foreground">5 crédits offerts à l'inscription — aucune carte requise.</p>
+        <p className="mt-4 text-xs text-muted-foreground">
+          5 crédits offerts à l'inscription — aucune carte requise.
+        </p>
       </section>
 
       {/* Features */}
@@ -81,7 +100,11 @@ function Landing() {
         {[
           { icon: MessageSquare, title: "Chat IA", desc: "Décrivez votre site, l'IA le crée." },
           { icon: Globe, title: "Publish Vercel", desc: "Déployez en un clic sur votre domaine." },
-          { icon: Shield, title: "Sécurité Firebase", desc: "Base de données & Auth Firestore intégrés." },
+          {
+            icon: Shield,
+            title: "Sécurité Firebase",
+            desc: "Base de données & Auth Firestore intégrés.",
+          },
           { icon: Zap, title: "Rapide", desc: "Génération instantanée grâce à Gemini 2.5 Flash." },
           { icon: CreditCard, title: "Prix mini", desc: "À partir de 5000 Ar les 20 crédits." },
           { icon: Sparkles, title: "Parrainage", desc: "+5 crédits par ami parrainé." },
@@ -108,9 +131,13 @@ function Landing() {
             </ul>
           </div>
           <div className="rounded-2xl border-2 border-primary bg-card p-8 relative">
-            <span className="absolute -top-3 right-6 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Recommandé</span>
+            <span className="absolute -top-3 right-6 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+              Recommandé
+            </span>
             <h3 className="text-xl font-bold">Pro</h3>
-            <p className="mt-2 text-3xl font-bold">5 000 Ar<span className="text-base font-normal text-muted-foreground">/mois</span></p>
+            <p className="mt-2 text-3xl font-bold">
+              5 000 Ar<span className="text-base font-normal text-muted-foreground">/mois</span>
+            </p>
             <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
               <li>• +15 crédits bonus</li>
               <li>• Sans badge DEVWEBIA</li>

@@ -5,14 +5,20 @@ import { firebaseConfig } from "@/integrations/firebase/config";
 import { z } from "zod";
 
 const siteTypeEnum = z.enum(["vitrine", "portfolio", "ecommerce", "hotel", "school", "erp"]);
+const languageEnum = z.enum(["fr", "mg", "en", "zh", "it"]);
 
 const inputSchema = z.object({
   projectId: z.string().optional(),
   prompt: z.string().min(1).max(4000),
   siteType: siteTypeEnum.optional(),
+  language: languageEnum.optional(),
   whatsappNumber: z.string().trim().max(30).optional(),
   pwaEnabled: z.boolean().optional(),
-  history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).max(30).optional(),
+  imageBase64: z.string().optional(),
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
+    .max(30)
+    .optional(),
 });
 
 type SiteType = z.infer<typeof siteTypeEnum>;
@@ -62,8 +68,19 @@ function buildSystemPrompt(
   pwaEnabled: boolean,
   userFirebaseSnippet: string,
   hasExistingFiles: boolean,
-  userPlan: "free" | "pro"
+  userPlan: "free" | "pro",
+  language: "fr" | "mg" | "en" | "zh" | "it" = "fr",
 ): string {
+  const languageNames: Record<string, string> = {
+    fr: "Français",
+    mg: "Malagasy",
+    en: "English",
+    zh: "中文 (Chinois)",
+    it: "Italiano (Italien)",
+  };
+  const langName = languageNames[language] || "Français";
+  const languageBlock = `\nLANGUE DE SORTIE ET DE CLARIFICATION OBLIGATOIRE : ${langName}.
+- Toutes les questions, options de quiz, textes du site web (index.html, admin.html, etc.), slogans et descriptions DOIVENT être intégralement rédigés en ${langName}.`;
   const pwaBlock = `\nAPPLICATION PWA AUTOMATIQUE & LOGO AI (OBLIGATOIRE POUR CHAT & NOUVEAUX SITES) :
 - TOUT site généré DOIT être une Application Web Progressive (PWA) 100% installable sur mobile et ordinateur.
 - L'IA DOIT GÉNÉRER AUTOMATIQUEMENT UN LOGO / ICÔNE PWA DESIGN :
@@ -134,6 +151,28 @@ function buildSystemPrompt(
 - VARIÉTÉ DE DESIGN & STYLES : L'IA doit varier les modèles de design UI (Glassmorphism, Dark Luxe, Minimalist Modern, Neo-Brutalist, Light Corporate) en fonction du domaine d'activité.
 - Tout ce contenu rédigé par l'IA doit être dynamiquement éditable dans l'Espace Admin (\`admin.html\` / \`admin.js\`) et synchronisé avec Firestore (\`app_data\` -> \`site_content\`).`;
 
+  const richSectionsAndReadMoreBlock = `\n10 SECTIONS MINIMUM & BOUTON VOIR PLUS & AJOUT DE SECTIONS PERSONNALISÉES (EXIGENCE MAJEURE) :
+1. **10 SECTIONS MINIMUM SUR LE SITE PUBLIC (\`index.html\`)** :
+   Le site web généré DOIT impérativement comporter au moins 10 sections riches, espacées et esthétiques pour être complet et professionnel :
+   - Section 1 : Barre de navigation supérieure (Navbar) avec logo, liens et boutons d'action.
+   - Section 2 : Carrousel / Multi-Hero d'accueil dynamique avec titre, sous-titre et image de fond.
+   - Section 3 : Section À propos / Présentation de l'entreprise ou du projet.
+   - Section 4 : Grille des Produits / Services / Offres phares avec prix et détails.
+   - Section 5 : Statistiques et Chiffres clés animés (ex: clients satisfaits, projets réalisés).
+   - Section 6 : Galerie photos ou Réalisations en grille moderne.
+   - Section 7 : Témoignages et Avis clients avec étoiles.
+   - Section 8 : FAQ (Foire aux questions) avec accordéon interactif.
+   - Section 9 : Section Contact / Formulaire / Bouton de commande WhatsApp direct.
+   - Section 10 : Pied de page (Footer) complet avec liens rapides, newsletter et mentions légales.
+
+2. **BOUTON "VOIR PLUS" / "LIRE LA SUITE" SUR LES PARAGRAPHES LONGS** :
+   - Pour tout paragraphe long ou texte descriptif (biographie, descriptions de services, articles), l'IA doit intégrer un bouton interactif "Voir plus" / "Lire la suite" (expand/collapse) en JavaScript pour éviter d'encombrer l'interface tout en permettant de lire l'intégralité du texte en un clic.
+
+3. **GÉNÉRATEUR DE SECTIONS PERSONNALISÉES ("AJOUTER UNE SECTION VAOVAO") DANS L'ADMIN** :
+   - Dans \`admin.html\` et \`admin.js\`, l'administrateur doit disposer d'un formulaire dédié "➕ Ajouter une nouvelle section sur-mesure" :
+     - Champs : Titre de la section, Contenu / Paragraphe (avec gestion de texte long), Image d'illustration (upload en Base64), Type de fond (Clair / Sombre / Coloré).
+     - Bouton "Ajouter au site" qui enregistre la nouvelle section dans Firestore (\`app_data\` -> \`site_content\` -> \`customSections\`) et rafraîchit immédiatement l'affichage sur le site public (\`index.html\`).`;
+
   const badgeBlock =
     userPlan === "free"
       ? `\nBADGE DEVWEBIA — OBLIGATOIRE (plan gratuit) :
@@ -155,10 +194,12 @@ Réponds TOUJOURS en JSON strict entouré de <JSON>…</JSON> :
 
 - Fichiers requis : index.html, script.js, firebase.js, admin.html, admin.js.
 - Utilise Tailwind CSS v4 (<script src="https://unpkg.com/@tailwindcss/browser@4"></script>).
+${languageBlock}
 ${clarificationBlock}
 ${adminBlock}
 ${domainBlock}
 ${badgeBlock}
+${richSectionsAndReadMoreBlock}
 ${siteTypeBlock(siteType, whatsapp)}
 ${pwaBlock}
 ${seoBlock}
@@ -171,13 +212,16 @@ function extractJson(text: string): GeneratedSite | null {
   let raw = m ? m[1] : text;
   raw = raw.trim();
   if (raw.startsWith("```")) {
-    raw = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    raw = raw
+      .replace(/^```(?:json)?/i, "")
+      .replace(/```$/, "")
+      .trim();
   }
 
   const tryParse = (str: string): GeneratedSite | null => {
     try {
       const parsed = JSON.parse(str);
-      let files: Record<string, string> = {};
+      const files: Record<string, string> = {};
       if (parsed.files && typeof parsed.files === "object") {
         for (const [k, v] of Object.entries(parsed.files)) {
           files[k] = String(v ?? "");
@@ -238,15 +282,17 @@ const OPENAI_COMPAT_BASE: Record<string, string> = {
 async function callAdminKey(
   apiKey: string,
   provider: string,
-  messages: Array<{ role: string; content: string }>
+  messages: Array<{ role: string; content: string }>,
 ) {
   const model = PROVIDER_DEFAULT_MODEL[provider] ?? PROVIDER_DEFAULT_MODEL.google;
 
   if (provider === "google") {
-    const geminiMessages = messages.filter((m) => m.role !== "system").map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    const geminiMessages = messages
+      .filter((m) => m.role !== "system")
+      .map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
     const systemInstruction = messages.find((m) => m.role === "system")?.content;
 
     const candidateModels = [
@@ -258,7 +304,7 @@ async function callAdminKey(
       "gemini-2.0-flash",
       "gemini-1.5-flash",
       "gemini-2.5-pro",
-      "gemini-1.5-pro"
+      "gemini-1.5-pro",
     ];
     let lastErr: Error | null = null;
 
@@ -271,10 +317,12 @@ async function callAdminKey(
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: geminiMessages,
-              systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+              systemInstruction: systemInstruction
+                ? { parts: [{ text: systemInstruction }] }
+                : undefined,
               generationConfig: { temperature: 0.7, maxOutputTokens: 32768 },
             }),
-          }
+          },
         );
         if (!res.ok) {
           const errText = await res.text();
@@ -333,8 +381,18 @@ function generateDefaultFallbackSite(params: {
   firebaseConfig: typeof firebaseConfig;
   userPlan: "free" | "pro";
   currentFiles: Record<string, string>;
+  language?: "fr" | "mg" | "en" | "zh" | "it";
 }): { text: string; tokens: number } {
-  const { prompt, siteType, whatsapp, pwaEnabled, firebaseConfig, userPlan, currentFiles } = params;
+  const {
+    prompt,
+    siteType,
+    whatsapp,
+    pwaEnabled,
+    firebaseConfig,
+    userPlan,
+    currentFiles,
+    language,
+  } = params;
 
   // Clean prompt text removing Q&A artifacts
   const cleanPromptText = prompt
@@ -346,16 +404,19 @@ function generateDefaultFallbackSite(params: {
     .trim();
 
   let titleMatch = "Mon Entreprise";
-  const nameMatch = prompt.match(/(?:nom|marque|entreprise|boutique)\s*[:=]?\s*([A-Za-z0-9\sàâäéèêëîïôöùûüç'-]{2,30})/i);
+  const nameMatch = prompt.match(
+    /(?:nom|marque|entreprise|boutique)\s*[:=]?\s*([A-Za-z0-9\sàâäéèêëîïôöùûüç'-]{2,30})/i,
+  );
   if (nameMatch && nameMatch[1]) {
     titleMatch = nameMatch[1].trim();
   } else if (cleanPromptText.length > 0 && cleanPromptText.length <= 30) {
     titleMatch = cleanPromptText;
   }
 
-  const defaultHeroSubtitle = cleanPromptText && cleanPromptText.length > 30 && cleanPromptText.length < 200
-    ? cleanPromptText
-    : "Découvrez nos produits et services d'exception. Une expérience unique conçue sur mesure pour répondre à toutes vos exigences.";
+  const defaultHeroSubtitle =
+    cleanPromptText && cleanPromptText.length > 30 && cleanPromptText.length < 200
+      ? cleanPromptText
+      : "Découvrez nos produits et services d'exception. Une expérience unique conçue sur mesure pour répondre à toutes vos exigences.";
 
   const waNum = whatsapp || "+261340000000";
   const cleanWaNum = waNum.replace(/[^0-9]/g, "");
@@ -372,7 +433,7 @@ if (typeof firebase !== 'undefined') {
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig);
   }
-  const dbId = "${firebaseConfig.firestoreDatabaseId || ''}";
+  const dbId = "${firebaseConfig.firestoreDatabaseId || ""}";
   let dbInstance = null;
   try {
     if (dbId && dbId !== "(default)") {
@@ -399,10 +460,13 @@ if (typeof firebase !== 'undefined') {
   if (Object.keys(currentFiles).length > 0) {
     const updatedFiles = { ...currentFiles };
     if (!updatedFiles["firebase.js"]) updatedFiles["firebase.js"] = firebaseJs;
-    if (updatedFiles["index.html"] && !updatedFiles["index.html"].includes("<!-- DEVWEBIA_UPDATED -->")) {
+    if (
+      updatedFiles["index.html"] &&
+      !updatedFiles["index.html"].includes("<!-- DEVWEBIA_UPDATED -->")
+    ) {
       updatedFiles["index.html"] = updatedFiles["index.html"].replace(
         "</body>",
-        `<!-- DEVWEBIA_UPDATED -->\n<script>console.log("Site mis à jour avec succès");</script>\n</body>`
+        `<!-- DEVWEBIA_UPDATED -->\n<script>console.log("Site mis à jour avec succès");</script>\n</body>`,
       );
     }
 
@@ -654,44 +718,358 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 `;
 
-  // Detect prompt language
-  const isMg = /amin'ny|ampiana|salama|misaotra|mangataka|tiko|resaka|amboaro|zavatra/i.test(prompt);
+  const fallbackQuestionsMap: Record<string, Array<{ q: string; options: string[] }>> = {
+    mg: [
+      {
+        q: "1. Inona no anarana marina sy ofisialin'ny marika na ny enterprise anao?",
+        options: ["Anarana manokana", "Mbola ho karohina"],
+      },
+      {
+        q: "2. Inona no slogan na phrase d'accroche lehibe indrindra amin'ny site?",
+        options: ["Slogan matihanina", "Mila hevitra amin'ny IA"],
+      },
+      {
+        q: "3. Inona avy ireo tolotra na vokatra phares tianao asongadina indrindra?",
+        options: ["Vokatra / Sary ary vidiny", "Tolotra sy fanazavana", "Samy misy azy roa"],
+      },
+      {
+        q: "4. Inona no loko fototra sy style visuel tianao hampiasaina?",
+        options: [
+          "Manga Moderne & Fotsy",
+          "Maitso Émeraude & Voajanahary",
+          "Mainty / Dark Luxe",
+          "Volamena / Élégant",
+        ],
+      },
+      {
+        q: "5. Mila section Hero maromaro (Slides am-panombohana) ve ianao?",
+        options: ["Eny, Slide 2 na 3 misy sary tsara", "Iray ihany dia ampy"],
+      },
+      {
+        q: "6. Inona no nomerao WhatsApp fandraisana kaomandy na hafatra?",
+        options: ["Mila bokatra WhatsApp direct", "Aleo formulaire e-mail sy antso"],
+      },
+      {
+        q: "7. Inona no adiresy fizika sy tanàna hisy ny orinasa na boutique?",
+        options: ["Antananarivo / Madagascar", "En ligne ihany (Tsy misy boutique)"],
+      },
+      {
+        q: "8. Inona avy ireo mot-clé Google (SEO) tianao hahitana anao haingana amin'ny recherche?",
+        options: [
+          "Achat, boutique, Madagascar",
+          "Services, entreprise, Antananarivo",
+          "Tolo-kevitra automatique",
+        ],
+      },
+      {
+        q: "9. Tianao hisy bokatra PWA (Installer l'application) amin'ny mobile ve?",
+        options: ["Eny, PWA complet amin'ny smartphone", "Tsia, site web ihany"],
+      },
+      {
+        q: "10. Inona no Code PIN tianao hidirana ao amin'ny Panneau Admin (CMS)?",
+        options: ["1234 (Azo ovaina rehefa avy eo)", "Code PIN personnalisé"],
+      },
+      {
+        q: "11. Tianao hisy section 'Momba anay' (A propos) sy tantaran'ny marika ve?",
+        options: ["Eny, misy sary sy tantara", "Tsia, aleo mivantana amin'ny vokatra"],
+      },
+      {
+        q: "12. Inona no fomba fandoavam-bola sy kaomandy tianao hiseho?",
+        options: [
+          "Paiement / Kaomandy WhatsApp",
+          "Mobile Money (Orange/Airtel)",
+          "Paiement en espèces amin'ny livraison",
+        ],
+      },
+      {
+        q: "13. Tianao hisy section 'Fijetsena sy Avis clients' (Testimonials) ve?",
+        options: ["Eny, misy kintana sy hevitry ny mpanjifa", "Tsia"],
+      },
+      {
+        q: "14. Manana nom de domaine manokana ve ianao (ohatra: .mg na .com)?",
+        options: ["Manana domaine (.mg / .com)", "Mbola hampiasa le lien gratuit aloha"],
+      },
+      {
+        q: "15. Inona no fanampiny na fonctionnalité manokana tianao hampiana ao amin'ny site?",
+        options: [
+          "Galerie d'images",
+          "Formulaire de contact dynamique",
+          "Filtre karkara vokatra",
+          "Espace membres / Client",
+        ],
+      },
+    ],
+    en: [
+      {
+        q: "1. What is the exact and official name of your brand or company?",
+        options: ["Specific name", "To be suggested by AI"],
+      },
+      {
+        q: "2. What is your main slogan or tagline?",
+        options: ["Professional slogan", "Ideas by AI"],
+      },
+      {
+        q: "3. What are the key products or services to highlight?",
+        options: ["Product catalog with prices", "Services & quote", "Both"],
+      },
+      {
+        q: "4. What color palette and visual style do you prefer?",
+        options: [
+          "Modern Blue & White",
+          "Emerald Green & Nature",
+          "Dark / Luxury",
+          "Gold / Elegant",
+        ],
+      },
+      {
+        q: "5. Would you like multiple hero slider carousels?",
+        options: ["Yes, 2-3 dynamic slides", "Single Hero is enough"],
+      },
+      {
+        q: "6. What is your WhatsApp number for orders?",
+        options: ["Direct WhatsApp button", "Email & call form"],
+      },
+      {
+        q: "7. What is the physical address or city of your business?",
+        options: ["Antananarivo / Madagascar", "100% Online (No store)"],
+      },
+      {
+        q: "8. Which Google SEO keywords will you target?",
+        options: ["Shopping, boutique, Madagascar", "Services, company", "Suggest automatically"],
+      },
+      {
+        q: "9. Do you want to enable the mobile PWA installation button?",
+        options: ["Yes, 100% PWA installable", "No, standard web site"],
+      },
+      {
+        q: "10. What security PIN code do you want for the Admin area?",
+        options: ["1234 (Changeable later)", "Custom PIN code"],
+      },
+      {
+        q: "11. Would you like a detailed 'About Us' section?",
+        options: ["Yes, presentation & values", "No, go straight to content"],
+      },
+      {
+        q: "12. Which ordering and payment methods to display?",
+        options: ["Direct WhatsApp order", "Mobile Money (Orange/Airtel)", "Cash on delivery"],
+      },
+      {
+        q: "13. Do you want a customer testimonials section?",
+        options: ["Yes, with star ratings", "No"],
+      },
+      {
+        q: "14. Do you have a custom domain name?",
+        options: ["Yes (.mg / .com)", "No, use free link"],
+      },
+      {
+        q: "15. What extra feature would you like to include?",
+        options: ["Photo gallery", "Interactive form", "Category filters", "Client portal"],
+      },
+    ],
+    zh: [
+      { q: "1. 您的品牌或公司的准确官方名称是什么？", options: ["特定名称", "由 AI 建议"] },
+      { q: "2. 您的主要标语或口号是什么？", options: ["专业标语", "AI 创意"] },
+      {
+        q: "3. 要突出的主要产品或服务是什么？",
+        options: ["带价格的产品目录", "服务与报价", "两者兼有"],
+      },
+      {
+        q: "4. 您喜欢什么配色方案和视觉风格？",
+        options: ["现代蓝白", "翡翠绿自然", "暗黑奢华", "金色优雅"],
+      },
+      { q: "5. 您需要多个轮播图幻灯片吗？", options: ["是，2-3个动态幻灯片", "单个即可"] },
+      {
+        q: "6. 您用于接收订单的 WhatsApp 号码是什么？",
+        options: ["直接 WhatsApp 按钮", "电子邮件和致电表单"],
+      },
+      {
+        q: "7. 您公司的实际地址或城市在哪里？",
+        options: ["安塔那那利佛 / 马达加斯加", "100% 在线（无实体店）"],
+      },
+      {
+        q: "8. 您将优先针对哪些 Google SEO 关键词？",
+        options: ["购物、精品店、马达加斯加", "服务、公司", "自动建议"],
+      },
+      { q: "9. 您想启用移动端 PWA 安装按钮吗？", options: ["是，100% 可安装 PWA", "否，标准网站"] },
+      {
+        q: "10. 您希望管理后台使用什么安全 PIN 码？",
+        options: ["1234（稍后可更改）", "自定义 PIN 码"],
+      },
+      {
+        q: "11. 您需要详细的“关于我们”部分吗？",
+        options: ["是，介绍与价值观", "否，直接进入内容"],
+      },
+      {
+        q: "12. 您希望显示哪些订购和支付方式？",
+        options: ["直接 WhatsApp 订购", "移动支付", "货到付款"],
+      },
+      { q: "13. 您想要客户见证或评价部分吗？", options: ["是，带星级评分", "否"] },
+      { q: "14. 您有自定义域名吗？", options: ["有 (.mg / .com)", "否，使用免费链接"] },
+      { q: "15. 您想包含哪些其他功能？", options: ["相册", "交互式表单", "分类筛选", "客户专区"] },
+    ],
+    it: [
+      {
+        q: "1. Qual è il nome esatto e ufficiale del vostro marchio o azienda?",
+        options: ["Nome specifico", "Da suggerire dall'IA"],
+      },
+      {
+        q: "2. Qual è il vostro slogan o tagline principale?",
+        options: ["Slogan professionale", "Idee dall'IA"],
+      },
+      {
+        q: "3. Quali sono i prodotti o servizi di punta da mettere in evidenza?",
+        options: ["Catalogo prodotti con prezzi", "Servizi e preventivo", "Entrambi"],
+      },
+      {
+        q: "4. Quale palette di colori e stile visivo preferite?",
+        options: [
+          "Blu Moderno & Bianco",
+          "Verde Smeraldo & Natura",
+          "Scuro / Dark Luxe",
+          "Dorato / Elegante",
+        ],
+      },
+      {
+        q: "5. Desiderate più slider caroselli Hero nella home?",
+        options: ["Sì, 2 o 3 slide dinamiche", "Un solo Hero basta"],
+      },
+      {
+        q: "6. Qual è il vostro numero WhatsApp per ricevere ordini?",
+        options: ["Pulsante WhatsApp diretto", "Modulo e-mail e chiamata"],
+      },
+      {
+        q: "7. Qual è l'indirizzo fisico o la città della vostra azienda?",
+        options: ["Antananarivo / Madagascar", "100% Online (Senza negozio)"],
+      },
+      {
+        q: "8. Quali parole chiave Google SEO intenderete mirare?",
+        options: [
+          "Acquisto, negozio, Madagascar",
+          "Servizi, azienda",
+          "Suggerisci automaticamente",
+        ],
+      },
+      {
+        q: "9. Volete abilitare il pulsante di installazione PWA mobile?",
+        options: ["Sì, PWA installabile al 100%", "No, sito web standard"],
+      },
+      {
+        q: "10. Quale codice PIN di sicurezza desiderate per l'area amministrativa?",
+        options: ["1234 (Modificabile in seguito)", "PIN personalizzato"],
+      },
+      {
+        q: "11. Desiderate una sezione 'Chi Siamo' dettagliata?",
+        options: ["Sì, con presentazione e valori", "No, passa diretto al contenuto"],
+      },
+      {
+        q: "12. Quali modalità di ordine e pagamento desiderate visualizzare?",
+        options: [
+          "Ordine diretto WhatsApp",
+          "Mobile Money (Orange/Airtel)",
+          "Pagamento alla consegna",
+        ],
+      },
+      {
+        q: "13. Volete una sezione di recensioni e testimonianze dei clienti?",
+        options: ["Sì, con valutazioni a stelle", "No"],
+      },
+      {
+        q: "14. Avete un nome di dominio personalizzato?",
+        options: ["Sì (.mg / .com)", "No, usa il link gratuito"],
+      },
+      {
+        q: "15. Quale funzionalità aggiuntiva desiderate includere?",
+        options: ["Galleria foto", "Modulo interattivo", "Filtro categorie", "Area clienti"],
+      },
+    ],
+    fr: [
+      {
+        q: "1. Quel est le nom exact et officiel de votre marque ou entreprise ?",
+        options: ["Nom spécifique", "À suggérer par l'IA"],
+      },
+      {
+        q: "2. Quel est votre slogan ou phrase d'accroche principale ?",
+        options: ["Slogan professionnel", "Idées par l'IA"],
+      },
+      {
+        q: "3. Quels sont les produits ou services phares à mettre en avant ?",
+        options: ["Catalogue produits avec prix", "Services & devis", "Les deux"],
+      },
+      {
+        q: "4. Quelle palette de couleurs et style visuel préférez-vous ?",
+        options: [
+          "Bleu Moderne & Blanc",
+          "Vert Émeraude & Nature",
+          "Sombre / Dark Luxe",
+          "Doré / Élégant",
+        ],
+      },
+      {
+        q: "5. Souhaitez-vous plusieurs carrousels/slides Hero d'accueil ?",
+        options: ["Oui, 2 ou 3 slides dynamiques", "Un seul Hero suffit"],
+      },
+      {
+        q: "6. Quel est votre numéro WhatsApp pour recevoir les commandes ?",
+        options: ["Bouton WhatsApp direct", "Formulaire e-mail & appel"],
+      },
+      {
+        q: "7. Quelle est l'adresse physique ou ville de votre entreprise ?",
+        options: ["Antananarivo / Madagascar", "100% En ligne (Sans boutique)"],
+      },
+      {
+        q: "8. Quels mots-clés Google (SEO) viserez-vous en priorité ?",
+        options: [
+          "Achat, boutique, Madagascar",
+          "Services, entreprise, Antananarivo",
+          "Suggérer automatiquement",
+        ],
+      },
+      {
+        q: "9. Voulez-vous activer le bouton PWA d'installation mobile ?",
+        options: ["Oui, PWA 100% installable sur mobile", "Non, site web standard"],
+      },
+      {
+        q: "10. Quel Code PIN de sécurité souhaitez-vous pour l'Espace Admin ?",
+        options: ["1234 (Modifiable plus tard)", "Code PIN personnalisé"],
+      },
+      {
+        q: "11. Souhaitez-vous une section 'À Propos' détaillée ?",
+        options: ["Oui, avec présentation et valeurs", "Non, passer direct au contenu"],
+      },
+      {
+        q: "12. Quels modes de commande et paiement souhaitez-vous afficher ?",
+        options: [
+          "Commande directe WhatsApp",
+          "Mobile Money (Orange/Airtel)",
+          "Paiement à la livraison",
+        ],
+      },
+      {
+        q: "13. Voulez-vous une section 'Avis & Témoignages Clients' ?",
+        options: ["Oui, avec notes étoiles", "Non"],
+      },
+      {
+        q: "14. Avez-vous un nom de domaine personnalisé (ex: .mg ou .com) ?",
+        options: ["Oui (.mg / .com)", "Non, utiliser le lien gratuit"],
+      },
+      {
+        q: "15. Quelle fonctionnalité supplémentaire souhaitez-vous inclure ?",
+        options: [
+          "Galerie photos",
+          "Formulaire interactif",
+          "Filtre par catégories",
+          "Espace client",
+        ],
+      },
+    ],
+  };
 
-  const fallbackQuestions = isMg
-    ? [
-        { q: "1. Inona no anarana marina sy ofisialin'ny marika na ny enterprise anao?", options: ["Anarana manokana", "Mbola ho karohina"] },
-        { q: "2. Inona no slogan na phrase d'accroche lehibe indrindra amin'ny site?", options: ["Slogan matihanina", "Mila hevitra amin'ny IA"] },
-        { q: "3. Inona avy ireo tolotra na vokatra phares tianao asongadina indrindra?", options: ["Vokatra / Sary ary vidiny", "Tolotra sy fanazavana", "Samy misy azy roa"] },
-        { q: "4. Inona no loko fototra sy style visuel tianao hampiasaina?", options: ["Manga Moderne & Fotsy", "Maitso Émeraude & Voajanahary", "Mainty / Dark Luxe", "Volamena / Élégant"] },
-        { q: "5. Mila section Hero maromaro (Slides am-panombohana) ve ianao?", options: ["Eny, Slide 2 na 3 misy sary tsara", "Iray ihany dia ampy"] },
-        { q: "6. Inona no nomerao WhatsApp fandraisana kaomandy na hafatra?", options: ["Mila bokatra WhatsApp direct", "Aleo formulaire e-mail sy antso"] },
-        { q: "7. Inona no adiresy fizika sy tanàna hisy ny orinasa na boutique?", options: ["Antananarivo / Madagascar", "En ligne ihany (Tsy misy boutique)"] },
-        { q: "8. Inona avy ireo mot-clé Google (SEO) tianao hahitana anao haingana amin'ny recherche?", options: ["Achat, boutique, Madagascar", "Services, entreprise, Antananarivo", "Tolo-kevitra automatique"] },
-        { q: "9. Tianao hisy bokatra PWA (Installer l'application) amin'ny mobile ve?", options: ["Eny, PWA complet amin'ny smartphone", "Tsia, site web ihany"] },
-        { q: "10. Inona no Code PIN tianao hidirana ao amin'ny Panneau Admin (CMS)?", options: ["1234 (Azo ovaina rehefa avy eo)", "Code PIN personnalisé"] },
-        { q: "11. Tianao hisy section 'Momba anay' (A propos) sy tantaran'ny marika ve?", options: ["Eny, misy sary sy tantara", "Tsia, aleo mivantana amin'ny vokatra"] },
-        { q: "12. Inona no fomba fandoavam-bola sy kaomandy tianao hiseho?", options: ["Paiement / Kaomandy WhatsApp", "Mobile Money (MVola/Orange/Airtel)", "Paiement en espèces amin'ny livraison"] },
-        { q: "13. Tianao hisy section 'Fijetsena sy Avis clients' (Testimonials) ve?", options: ["Eny, misy kintana sy hevitry ny mpanjifa", "Tsia"] },
-        { q: "14. Manana nom de domaine manokana ve ianao (ohatra: .mg na .com)?", options: ["Manana domaine (.mg / .com)", "Mbola hampiasa le lien gratuit aloha"] },
-        { q: "15. Inona no fanampiny na fonctionnalité manokana tianao hampiana ao amin'ny site?", options: ["Galerie d'images", "Formulaire de contact dynamique", "Filtre karkara vokatra", "Espace membres / Client"] }
-      ]
-    : [
-        { q: "1. Quel est le nom exact et officiel de votre marque ou entreprise ?", options: ["Nom spécifique", "À suggérer par l'IA"] },
-        { q: "2. Quel est votre slogan ou phrase d'accroche principale ?", options: ["Slogan professionnel", "Idées par l'IA"] },
-        { q: "3. Quels sont les produits ou services phares à mettre en avant ?", options: ["Catalogue produits avec prix", "Services & devis", "Les deux"] },
-        { q: "4. Quelle palette de couleurs et style visuel préférez-vous ?", options: ["Bleu Moderne & Blanc", "Vert Émeraude & Nature", "Sombre / Dark Luxe", "Doré / Élégant"] },
-        { q: "5. Souhaitez-vous plusieurs carrousels/slides Hero d'accueil ?", options: ["Oui, 2 ou 3 slides dynamiques", "Un seul Hero suffit"] },
-        { q: "6. Quel est votre numéro WhatsApp pour recevoir les commandes ?", options: ["Bouton WhatsApp direct", "Formulaire e-mail & appel"] },
-        { q: "7. Quelle est l'adresse physique ou ville de votre entreprise ?", options: ["Antananarivo / Madagascar", "100% En ligne (Sans boutique)"] },
-        { q: "8. Quels mots-clés Google (SEO) viserez-vous en priorité ?", options: ["Achat, boutique, Madagascar", "Services, entreprise, Antananarivo", "Suggérer automatiquement"] },
-        { q: "9. Voulez-vous activer le bouton PWA d'installation mobile ?", options: ["Oui, PWA 100% installable sur mobile", "Non, site web standard"] },
-        { q: "10. Quel Code PIN de sécurité souhaitez-vous pour l'Espace Admin ?", options: ["1234 (Modifiable plus tard)", "Code PIN personnalisé"] },
-        { q: "11. Souhaitez-vous une section 'À Propos' détaillée ?", options: ["Oui, avec présentation et valeurs", "Non, passer direct au contenu"] },
-        { q: "12. Quels modes de commande et paiement souhaitez-vous afficher ?", options: ["Commande directe WhatsApp", "Mobile Money (MVola/Orange/Airtel)", "Paiement à la livraison"] },
-        { q: "13. Voulez-vous une section 'Avis & Témoignages Clients' ?", options: ["Oui, avec notes étoiles", "Non"] },
-        { q: "14. Avez-vous un nom de domaine personnalisé (ex: .mg ou .com) ?", options: ["Oui (.mg / .com)", "Non, utiliser le lien gratuit"] },
-        { q: "15. Quelle fonctionnalité supplémentaire souhaitez-vous inclure ?", options: ["Galerie photos", "Formulaire interactif", "Filtre par catégories", "Espace client"] }
-      ];
+  const detectedLang =
+    language ||
+    (/amin'ny|ampiana|salama|misaotra|mangataka|tiko|resaka|amboaro|zavatra/i.test(prompt)
+      ? "mg"
+      : "fr");
+  const fallbackQuestions = fallbackQuestionsMap[detectedLang] || fallbackQuestionsMap.fr;
 
   const adminHtml = `<!DOCTYPE html>
 <html lang="fr">
@@ -839,7 +1217,7 @@ document.addEventListener("DOMContentLoaded", function () {
         <!-- Google Snippet Simulator -->
         <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
           <p class="text-xs text-slate-400 font-semibold mb-2">Aperçu direct du résultat Google Search :</p>
-          <p id="seo-preview-url" class="text-xs text-emerald-400 font-mono truncate">https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, '')}.mg › index.html</p>
+          <p id="seo-preview-url" class="text-xs text-emerald-400 font-mono truncate">https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, "")}.mg › index.html</p>
           <p id="seo-preview-title" class="text-base font-semibold text-blue-400 hover:underline cursor-pointer truncate">${titleMatch} — Site Officiel</p>
           <p id="seo-preview-desc" class="text-xs text-slate-300 line-clamp-2">${defaultHeroSubtitle}</p>
         </div>
@@ -1132,15 +1510,15 @@ document.addEventListener("DOMContentLoaded", function () {
     "sitemap.xml": `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, '')}.mg/</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <loc>https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, "")}.mg/</loc>
+    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 </urlset>`,
     "robots.txt": `User-agent: *
 Allow: /
-Sitemap: https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, '')}.mg/sitemap.xml`
+Sitemap: https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, "")}.mg/sitemap.xml`,
   };
 
   if (pwaEnabled) {
@@ -1154,7 +1532,7 @@ Sitemap: https://${titleMatch.toLowerCase().replace(/[^a-z0-9]/g, '')}.mg/sitema
         theme_color: "#4f46e5",
       },
       null,
-      2
+      2,
     );
     files["sw.js"] = `self.addEventListener("fetch", function(e) {});`;
   }
@@ -1195,7 +1573,8 @@ export const generateSite = createServerFn({ method: "POST" })
     const integ = await adminDb.getUserIntegrations(userId);
 
     const hasPersonalKey = !!(integ?.ai_provider && integ?.ai_api_key);
-    const subActive = !!profile?.ai_sub_expires_at && new Date(profile.ai_sub_expires_at).getTime() > Date.now();
+    const subActive =
+      !!profile?.ai_sub_expires_at && new Date(profile.ai_sub_expires_at).getTime() > Date.now();
     const useByok = hasPersonalKey && subActive;
 
     if (!useByok && (profile?.credits ?? 0) < 1) throw new Error("insufficient_credits");
@@ -1250,7 +1629,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
      };
      if (typeof firebase !== 'undefined') {
        if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
-       const dbId = "${firebaseConfig.firestoreDatabaseId || ''}";
+       const dbId = "${firebaseConfig.firestoreDatabaseId || ""}";
        try {
          window.db = (dbId && dbId !== "(default)") ? firebase.app().firestore(dbId) : firebase.firestore();
        } catch (e) {
@@ -1281,13 +1660,17 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
           projectPwa,
           userFirebaseSnippet,
           Object.keys(currentFiles).length > 0,
-          userPlan
+          userPlan,
+          data.language,
         ),
       },
       ...(data.history ?? []),
     ];
 
     let userMsg = data.prompt;
+    if (data.imageBase64) {
+      userMsg += `\n\n[INSPIRATION IMAGE / SCREENSHOT FOURNIE PAR LE CLIENT : Le client a fourni une image, maquette ou capture d'écran de référence en pièce jointe (${data.imageBase64.slice(0, 50)}...). Analyse attentivement les couleurs, la disposition, la typographie, les sections et le style visuel de cette image pour concevoir ou adapter le site web afin qu'il reproduise fidèlement ce style.]`;
+    }
     if (Object.keys(currentFiles).length) {
       userMsg += `\n\n--- FICHIERS ACTUELS DU SITE ---\n`;
       for (const [path, content] of Object.entries(currentFiles)) {
@@ -1384,6 +1767,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
         firebaseConfig,
         userPlan,
         currentFiles,
+        language: data.language,
       });
     }
 
@@ -1398,6 +1782,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
         firebaseConfig,
         userPlan,
         currentFiles,
+        language: data.language,
       });
       parsed = extractJson(fallbackResult.text);
     }
@@ -1411,7 +1796,9 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     if (Object.keys(parsed.files).length === 0) {
       const creditsUsedNoop = useByok ? 0 : 1;
       if (creditsUsedNoop > 0) {
-        await adminDb.updateProfile(userId, { credits: Math.max(0, (profile?.credits || 0) - creditsUsedNoop) });
+        await adminDb.updateProfile(userId, {
+          credits: Math.max(0, (profile?.credits || 0) - creditsUsedNoop),
+        });
       }
       await adminDb.updateProject(projectId!, {
         site_type: projectSiteType,
@@ -1447,7 +1834,9 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
 
     const creditsUsed = useByok ? 0 : Math.max(1, Math.ceil(result.tokens / 15000));
     if (creditsUsed > 0) {
-      await adminDb.updateProfile(userId, { credits: Math.max(0, (profile?.credits || 0) - creditsUsed) });
+      await adminDb.updateProfile(userId, {
+        credits: Math.max(0, (profile?.credits || 0) - creditsUsed),
+      });
     }
 
     await adminDb.updateProject(projectId!, {

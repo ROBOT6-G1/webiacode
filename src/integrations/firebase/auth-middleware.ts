@@ -45,6 +45,5 @@ export const requireFirebaseAuth = createMiddleware({ type: "function" }).server
         email,
       },
     });
-  }
+  },
 );
-

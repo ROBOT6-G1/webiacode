@@ -80,16 +80,36 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "DEVWEBIA — Créez votre site avec l'IA" },
-      { name: "description", content: "DEVWEBIA : générez, prévisualisez et publiez votre site web en discutant avec une IA. Powered by Gemini." },
+      {
+        name: "description",
+        content:
+          "DEVWEBIA : générez, prévisualisez et publiez votre site web en discutant avec une IA. Powered by Gemini.",
+      },
       { name: "author", content: "DEVWEBIA" },
       { property: "og:title", content: "DEVWEBIA — Créez votre site avec l'IA" },
-      { property: "og:description", content: "DEVWEBIA : générez, prévisualisez et publiez votre site web en discutant avec une IA. Powered by Gemini." },
+      {
+        property: "og:description",
+        content:
+          "DEVWEBIA : générez, prévisualisez et publiez votre site web en discutant avec une IA. Powered by Gemini.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "DEVWEBIA — Créez votre site avec l'IA" },
-      { name: "twitter:description", content: "DEVWEBIA : générez, prévisualisez et publiez votre site web en discutant avec une IA. Powered by Gemini." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a4e7c74d-35fa-408d-9b6d-622c6b2591fd" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a4e7c74d-35fa-408d-9b6d-622c6b2591fd" },
+      {
+        name: "twitter:description",
+        content:
+          "DEVWEBIA : générez, prévisualisez et publiez votre site web en discutant avec une IA. Powered by Gemini.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a4e7c74d-35fa-408d-9b6d-622c6b2591fd",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a4e7c74d-35fa-408d-9b6d-622c6b2591fd",
+      },
     ],
     links: [
       {

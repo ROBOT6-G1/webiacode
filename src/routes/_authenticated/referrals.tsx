@@ -19,7 +19,7 @@ function Referrals() {
       const profRef = doc(db, "profiles", user.uid);
       const snap = await getDoc(profRef);
       let code = snap.exists() ? snap.data()?.referral_code : "";
-      
+
       // Auto-generate code if user doesn't have one
       if (!code) {
         code = `REF-${user.uid.slice(0, 6).toUpperCase()}`;
@@ -34,7 +34,7 @@ function Referrals() {
         bonus_granted?: boolean;
         created_at?: string;
       }>;
-      
+
       const paidCount = refs.filter((r) => r.bonus_granted).length;
       const bonus = paidCount * 5;
 
@@ -42,7 +42,9 @@ function Referrals() {
     },
   });
 
-  const url = profile.data?.code ? `${typeof window !== "undefined" ? window.location.origin : ""}/auth?mode=signup&ref=${profile.data.code}` : "";
+  const url = profile.data?.code
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/auth?mode=signup&ref=${profile.data.code}`
+    : "";
   const paidCount = profile.data?.paidCount ?? 0;
   const isMaxReached = paidCount >= 10;
 
@@ -54,7 +56,9 @@ function Referrals() {
           Programme de Parrainage
         </h1>
         <p className="text-muted-foreground mt-1">
-          Invitez vos amis à rejoindre DEVWEBIA et gagnez <strong className="text-primary">5 crédits bonus</strong> par ami inscrit (limité à <strong>10 amis maximum</strong>, soit jusqu'à <strong>50 crédits offerts</strong>).
+          Invitez vos amis à rejoindre DEVWEBIA et gagnez{" "}
+          <strong className="text-primary">5 crédits bonus</strong> par ami inscrit (limité à{" "}
+          <strong>10 amis maximum</strong>, soit jusqu'à <strong>50 crédits offerts</strong>).
         </p>
       </div>
 
@@ -96,7 +100,8 @@ function Referrals() {
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Il vous reste {10 - paidCount} place(s) éligible(s) pour obtenir 5 crédits gratuits par ami.
+            Il vous reste {10 - paidCount} place(s) éligible(s) pour obtenir 5 crédits gratuits par
+            ami.
           </p>
         )}
       </div>
@@ -105,14 +110,24 @@ function Referrals() {
       <div className="rounded-2xl border border-border bg-card p-6 space-y-3">
         <p className="text-sm font-semibold">Votre lien de parrainage exclusif</p>
         <div className="flex gap-2">
-          <input readOnly value={url} className="flex-1 rounded-xl bg-muted px-3 py-2 text-sm font-mono border border-border" />
-          <Button onClick={() => { navigator.clipboard.writeText(url); toast.success("Lien copié dans le presse-papier !"); }}>
+          <input
+            readOnly
+            value={url}
+            className="flex-1 rounded-xl bg-muted px-3 py-2 text-sm font-mono border border-border"
+          />
+          <Button
+            onClick={() => {
+              navigator.clipboard.writeText(url);
+              toast.success("Lien copié dans le presse-papier !");
+            }}
+          >
             <Copy className="h-4 w-4 mr-2" />
             Copier
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Code de parrainage : <span className="font-mono font-bold text-primary">{profile.data?.code}</span>
+          Code de parrainage :{" "}
+          <span className="font-mono font-bold text-primary">{profile.data?.code}</span>
         </p>
       </div>
 
@@ -123,18 +138,28 @@ function Referrals() {
           Historique de vos Filleuls ({profile.data?.list?.length ?? 0})
         </h3>
 
-        {(!profile.data?.list || profile.data.list.length === 0) ? (
+        {!profile.data?.list || profile.data.list.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            Aucun ami n'a encore utilisé votre lien. Partagez votre lien de parrainage pour recevoir des crédits !
+            Aucun ami n'a encore utilisé votre lien. Partagez votre lien de parrainage pour recevoir
+            des crédits !
           </p>
         ) : (
           <div className="space-y-2">
             {profile.data.list.map((item, idx) => (
-              <div key={item.id || idx} className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/30 text-sm">
+              <div
+                key={item.id || idx}
+                className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/30 text-sm"
+              >
                 <div>
                   <p className="font-medium">{item.referred_email || "Utilisateur anonyme"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {item.created_at ? new Date(item.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Inscrit"}
+                    {item.created_at
+                      ? new Date(item.created_at).toLocaleDateString("fr-FR", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })
+                      : "Inscrit"}
                   </p>
                 </div>
                 <div>

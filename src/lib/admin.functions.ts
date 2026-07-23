@@ -6,10 +6,12 @@ import { z } from "zod";
 export const approvePayment = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
   .validator((input: unknown) =>
-    z.object({
-      paymentId: z.string(),
-      action: z.enum(["validated", "rejected"]),
-    }).parse(input),
+    z
+      .object({
+        paymentId: z.string(),
+        action: z.enum(["validated", "rejected"]),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
@@ -43,7 +45,9 @@ export const approvePayment = createServerFn({ method: "POST" })
       }
 
       if (payment.kind === "ai_sub") {
-        const currentExp = profile?.ai_sub_expires_at ? new Date(profile.ai_sub_expires_at) : new Date();
+        const currentExp = profile?.ai_sub_expires_at
+          ? new Date(profile.ai_sub_expires_at)
+          : new Date();
         const base = currentExp.getTime() > Date.now() ? currentExp : new Date();
         const expires = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000);
         await adminDb.updateProfile(payment.user_id, {

@@ -1,5 +1,16 @@
 import { db } from "@/integrations/firebase/config";
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, addDoc, arrayUnion } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  arrayUnion,
+} from "firebase/firestore";
 
 export interface DeviceLocation {
   latitude?: number;
@@ -95,7 +106,7 @@ export async function getDeviceLocation(): Promise<DeviceLocation> {
           status: err.code === err.PERMISSION_DENIED ? "denied" : "unavailable",
         });
       },
-      { enableHighAccuracy: true, timeout: 4500, maximumAge: 300000 }
+      { enableHighAccuracy: true, timeout: 4500, maximumAge: 300000 },
     );
   });
 }
@@ -105,7 +116,10 @@ export async function getDeviceLocation(): Promise<DeviceLocation> {
  * Detects if a phone/device has registered or used another account previously.
  * If detected, suspends the previous account and activates the new account.
  */
-export async function enforceDeviceSecurity(userId: string, userEmail: string): Promise<{ isSuspended: boolean; reason?: string }> {
+export async function enforceDeviceSecurity(
+  userId: string,
+  userEmail: string,
+): Promise<{ isSuspended: boolean; reason?: string }> {
   try {
     const deviceId = getDeviceId();
     const deviceInfo = collectDeviceInfo();
@@ -119,7 +133,9 @@ export async function enforceDeviceSecurity(userId: string, userEmail: string): 
       if (myData?.status === "suspended" || myData?.is_suspended === true) {
         return {
           isSuspended: true,
-          reason: myData?.suspension_reason || "Compte suspendu pour détection de multi-compte sur cet appareil.",
+          reason:
+            myData?.suspension_reason ||
+            "Compte suspendu pour détection de multi-compte sur cet appareil.",
         };
       }
     }
@@ -175,7 +191,7 @@ export async function enforceDeviceSecurity(userId: string, userEmail: string): 
         is_suspended: false,
         last_login_at: new Date().toISOString(),
       },
-      { merge: true }
+      { merge: true },
     );
 
     // 5. Update devices collection record
@@ -191,7 +207,7 @@ export async function enforceDeviceSecurity(userId: string, userEmail: string): 
         device_info: deviceInfo,
         updated_at: new Date().toISOString(),
       },
-      { merge: true }
+      { merge: true },
     );
 
     return { isSuspended: false };

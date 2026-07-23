@@ -32,7 +32,9 @@ export const publishSite = createServerFn({ method: "POST" })
     if (!integ?.github_username) missing.push("Nom d'utilisateur GitHub");
     if (!integ?.vercel_token) missing.push("Token Vercel");
     if (missing.length) {
-      throw new Error(`Configuration incomplète — allez sur /connections et renseignez : ${missing.join(", ")}.`);
+      throw new Error(
+        `Configuration incomplète — allez sur /connections et renseignez : ${missing.join(", ")}.`,
+      );
     }
 
     const project = await adminDb.getProject(data.projectId);
@@ -48,7 +50,9 @@ export const publishSite = createServerFn({ method: "POST" })
 
     const teamQS = vercelTeam ? `?teamId=${encodeURIComponent(vercelTeam)}` : "";
 
-    const repoName = project.github_repo?.split("/").pop() || `devwebia-${slugify(project.name)}-${data.projectId.slice(0, 6)}`;
+    const repoName =
+      project.github_repo?.split("/").pop() ||
+      `devwebia-${slugify(project.name)}-${data.projectId.slice(0, 6)}`;
     let repoFullName = project.github_repo ?? `${ghUser}/${repoName}`;
 
     // Sync files to GitHub (best effort, non-blocking for Vercel deployment)
@@ -97,17 +101,23 @@ export const publishSite = createServerFn({ method: "POST" })
       }
 
       for (const [path, content] of Object.entries(files)) {
-        const encodedPath = path.split("/").map((p) => encodeURIComponent(p)).join("/");
+        const encodedPath = path
+          .split("/")
+          .map((p) => encodeURIComponent(p))
+          .join("/");
 
         let sha: string | undefined;
         try {
-          const getRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
-            headers: {
-              Authorization: `Bearer ${ghToken}`,
-              Accept: "application/vnd.github+json",
-              "User-Agent": "DEVWEBIA",
+          const getRes = await fetch(
+            `https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`,
+            {
+              headers: {
+                Authorization: `Bearer ${ghToken}`,
+                Accept: "application/vnd.github+json",
+                "User-Agent": "DEVWEBIA",
+              },
             },
-          });
+          );
           if (getRes.ok) {
             const j = (await getRes.json()) as { sha?: string };
             sha = j.sha;
@@ -116,20 +126,23 @@ export const publishSite = createServerFn({ method: "POST" })
           // ignore get content error
         }
 
-        const putRes = await fetch(`https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${ghToken}`,
-            Accept: "application/vnd.github+json",
-            "User-Agent": "DEVWEBIA",
-            "Content-Type": "application/json",
+        const putRes = await fetch(
+          `https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${ghToken}`,
+              Accept: "application/vnd.github+json",
+              "User-Agent": "DEVWEBIA",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: `DEVWEBIA update ${path}`,
+              content: toBase64(content),
+              sha,
+            }),
           },
-          body: JSON.stringify({
-            message: `DEVWEBIA update ${path}`,
-            content: toBase64(content),
-            sha,
-          }),
-        });
+        );
 
         if (!putRes.ok) {
           console.warn(`GitHub upload warning for ${path}: ${putRes.status}`, await putRes.text());
@@ -141,9 +154,12 @@ export const publishSite = createServerFn({ method: "POST" })
 
     let vercelProjectId = project.vercel_project_id ?? null;
     if (!vercelProjectId) {
-      const findRes = await fetch(`https://api.vercel.com/v9/projects/${encodeURIComponent(repoName)}${teamQS}`, {
-        headers: { Authorization: `Bearer ${vercelToken}` },
-      });
+      const findRes = await fetch(
+        `https://api.vercel.com/v9/projects/${encodeURIComponent(repoName)}${teamQS}`,
+        {
+          headers: { Authorization: `Bearer ${vercelToken}` },
+        },
+      );
       if (findRes.ok) {
         const j = (await findRes.json()) as { id?: string };
         vercelProjectId = j.id ?? null;
@@ -158,7 +174,9 @@ export const publishSite = createServerFn({ method: "POST" })
           body: JSON.stringify({ name: repoName, framework: null }),
         });
         if (!createProjRes.ok) {
-          throw new Error(`Vercel create project: ${createProjRes.status} ${await createProjRes.text()}`);
+          throw new Error(
+            `Vercel create project: ${createProjRes.status} ${await createProjRes.text()}`,
+          );
         }
         const j = (await createProjRes.json()) as { id: string };
         vercelProjectId = j.id;
