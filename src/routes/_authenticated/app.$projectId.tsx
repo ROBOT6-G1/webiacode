@@ -173,6 +173,7 @@ function ProjectView() {
           prompt: userPrompt,
           language: lang,
           imageBase64: imageBase64 || undefined,
+          platformUrl: window.location.origin,
         },
         headers,
       });

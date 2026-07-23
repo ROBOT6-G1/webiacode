@@ -16,6 +16,7 @@ const inputSchema = z.object({
   whatsappNumber: z.string().trim().max(30).optional(),
   pwaEnabled: z.boolean().optional(),
   imageBase64: z.string().optional(),
+  platformUrl: z.string().optional(),
   history: z
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
     .max(30)
@@ -124,6 +125,7 @@ function buildSystemPrompt(
   hasExistingFiles: boolean,
   userPlan: "free" | "pro",
   language: "fr" | "mg" | "en" | "zh" | "it" = "fr",
+  platformUrl?: string,
 ): string {
   const languageNames: Record<string, string> = {
     fr: "Français",
@@ -239,10 +241,11 @@ function buildSystemPrompt(
      - Champs : Titre de la section, Contenu / Paragraphe (avec gestion de texte long), Image d'illustration (upload en Base64), Type de fond (Clair / Sombre / Coloré).
      - Bouton "Ajouter au site" qui enregistre la nouvelle section dans Firestore (\`app_data\` -> \`site_content\` -> \`customSections\`) et rafraîchit immédiatement l'affichage sur le site public (\`index.html\`).`;
 
+  const pUrl = platformUrl ? `${platformUrl}?ref=badge` : "https://devwebia.mg";
   const badgeBlock =
     userPlan === "free"
       ? `\nBADGE DEVWEBIA — OBLIGATOIRE (plan gratuit) :
-- Ajoute en bas à gauche du site public le badge interactif avec l'id "devwebia-badge". Il doit être un lien vers "https://www.facebook.com/devwebia" avec une icône de baguette magique, et inclure un petit bouton 'X' à la fin pour le masquer au clic (onclick="document.getElementById('devwebia-badge').style.display='none'"). Exemple : <div id="devwebia-badge" class="fixed bottom-4 left-4 z-50 bg-slate-900/95 text-white text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-2xl border border-slate-700/50 backdrop-blur-md flex items-center gap-3 transition-all duration-300"><a href="https://www.facebook.com/devwebia" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Fait avec DEVWEBIA</a><button onclick="document.getElementById('devwebia-badge').style.display='none'" class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-full w-5 h-5 flex items-center justify-center transition" title="Fermer"><i class="fa-solid fa-times"></i></button></div>`
+- Ajoute en bas à gauche du site public le badge interactif avec l'id "devwebia-badge". Il doit être un lien vers "${pUrl}" avec une icône de baguette magique, et inclure un petit bouton 'X' à la fin pour le masquer au clic (onclick="document.getElementById('devwebia-badge').style.display='none'"). Exemple : <div id="devwebia-badge" class="fixed bottom-4 left-4 z-50 bg-slate-900/95 text-white text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-2xl border border-slate-700/50 backdrop-blur-md flex items-center gap-3 transition-all duration-300"><a href="${pUrl}" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Fait avec DEVWEBIA</a><button onclick="document.getElementById('devwebia-badge').style.display='none'" class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-full w-5 h-5 flex items-center justify-center transition" title="Fermer"><i class="fa-solid fa-times"></i></button></div>`
       : `\nBADGE DEVWEBIA — plan Pro : ne pas ajouter de badge.`;
 
   return `Tu es DEVWEBIA, développeur front-end SENIOR et DESIGNER UI. Tu génères des sites web modernes avec Firebase et leur interface d'administration.
@@ -609,6 +612,7 @@ function generateDefaultFallbackSite(params: {
   userPlan: "free" | "pro";
   currentFiles: Record<string, string>;
   language?: "fr" | "mg" | "en" | "zh" | "it";
+  platformUrl?: string;
 }): { text: string; tokens: number } {
   const {
     prompt,
@@ -619,6 +623,7 @@ function generateDefaultFallbackSite(params: {
     userPlan,
     currentFiles,
     language,
+    platformUrl,
   } = params;
 
   // Clean prompt text removing Q&A artifacts
@@ -706,10 +711,11 @@ if (typeof firebase !== 'undefined') {
     return { text: `<JSON>\n${JSON.stringify(payload, null, 2)}\n</JSON>`, tokens: 500 };
   }
 
+  const fallbackPlatformUrl = platformUrl ? `${platformUrl}?ref=badge` : "https://devwebia.mg";
   const badgeHtml =
     userPlan === "free"
       ? `<div id="devwebia-badge" class="fixed bottom-4 left-4 z-50 bg-slate-900/95 text-white text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-2xl border border-slate-700/50 backdrop-blur-md flex items-center gap-3 transition-all duration-300">
-           <a href="https://www.facebook.com/devwebia" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5">
+           <a href="${fallbackPlatformUrl}" target="_blank" rel="noopener noreferrer" class="hover:text-amber-400 transition flex items-center gap-1.5">
              <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Fait avec DEVWEBIA
            </a>
            <button onclick="document.getElementById('devwebia-badge').style.display='none'" class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-full w-5 h-5 flex items-center justify-center transition" title="Fermer">
@@ -3113,6 +3119,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
           Object.keys(currentFiles).length > 0,
           userPlan,
           data.language,
+          data.platformUrl,
         ),
       },
       ...(data.history ?? []),
@@ -3219,6 +3226,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
         userPlan,
         currentFiles,
         language: data.language,
+        platformUrl: data.platformUrl,
       });
     }
 
@@ -3234,6 +3242,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
         userPlan,
         currentFiles,
         language: data.language,
+        platformUrl: data.platformUrl,
       });
       parsed = extractJson(fallbackResult.text);
     }
