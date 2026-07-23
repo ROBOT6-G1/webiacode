@@ -675,18 +675,329 @@ if (typeof firebase !== 'undefined') {
   if (Object.keys(currentFiles).length > 0) {
     const updatedFiles = { ...currentFiles };
     if (!updatedFiles["firebase.js"]) updatedFiles["firebase.js"] = firebaseJs;
-    if (
-      updatedFiles["index.html"] &&
-      !updatedFiles["index.html"].includes("<!-- DEVWEBIA_UPDATED -->")
-    ) {
-      updatedFiles["index.html"] = updatedFiles["index.html"].replace(
-        "</body>",
-        `<!-- DEVWEBIA_UPDATED -->\n<script>console.log("Site mis à jour avec succès");</script>\n</body>`,
-      );
+
+    let html = updatedFiles["index.html"] || "";
+    if (html) {
+      const lowerPrompt = prompt.toLowerCase();
+
+      // Helper to insert section before footer or body
+      const insertSection = (sectionHtml: string) => {
+        if (html.includes("<footer")) {
+          html = html.replace("<footer", `${sectionHtml}\n\n<footer`);
+        } else if (html.includes("</main>")) {
+          html = html.replace("</main>", `${sectionHtml}\n</main>`);
+        } else if (html.includes('<script src="firebase.js">')) {
+          html = html.replace('<script src="firebase.js">', `${sectionHtml}\n<script src="firebase.js">`);
+        } else if (html.includes("</body>")) {
+          html = html.replace("</body>", `${sectionHtml}\n</body>`);
+        } else {
+          html += `\n${sectionHtml}`;
+        }
+      };
+
+      const replaceOrInsertSection = (sectionId: string, sectionHtml: string) => {
+        const sectionRegex = new RegExp(`<section[^>]*id=["']${sectionId}["'][\\s\\S]*?<\\/section>`, "gi");
+        if (sectionRegex.test(html)) {
+          html = html.replace(sectionRegex, sectionHtml);
+        } else {
+          insertSection(sectionHtml);
+        }
+      };
+
+      // 1. Update Title / Brand if user specified name
+      if (titleMatch && titleMatch !== "Mon Entreprise") {
+        html = html.replace(/<title data-cms="siteTitle">.*?<\/title>/gi, `<title data-cms="siteTitle">${titleMatch}</title>`);
+        html = html.replace(/<span data-cms="siteTitle">.*?<\/span>/gi, `<span data-cms="siteTitle">${titleMatch}</span>`);
+      }
+
+      // 2. Section additions based on prompt keywords
+      if (
+        lowerPrompt.includes("service") ||
+        lowerPrompt.includes("offre") ||
+        lowerPrompt.includes("fampiharana") ||
+        lowerPrompt.includes("funsion") ||
+        lowerPrompt.includes("fonctionnalite")
+      ) {
+        const servicesSec = `
+  <section id="services" class="py-20 bg-white border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 uppercase tracking-wider mb-4">
+        ✨ Nos Offres & Services
+      </span>
+      <h2 data-cms="servicesTitle" class="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">Services Sur-Mesure</h2>
+      <p data-cms="servicesSubtitle" class="text-slate-600 max-w-2xl mx-auto mb-16 text-base">Des prestations d'exception conçues pour satisfaire vos exigences et booster vos résultats.</p>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-left hover:shadow-xl transition duration-300">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-bold mb-6 shadow-md">
+            <i class="fa-solid fa-star"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Service Qualité Supérieure</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-6">Accompagnement personnalisé et suivi rigoureux à chaque étape.</p>
+          <a data-cms-wa-link href="https://wa.me/${cleanWaNum}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition inline-flex items-center gap-2">
+            Commander sur WhatsApp <i class="fa-brands fa-whatsapp"></i>
+          </a>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-left hover:shadow-xl transition duration-300">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl font-bold mb-6 shadow-md">
+            <i class="fa-solid fa-bolt"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Rapidité & Efficacité</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-6">Prise en charge immédiate pour vous garantir des résultats rapides.</p>
+          <a data-cms-wa-link href="https://wa.me/${cleanWaNum}" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition inline-flex items-center gap-2">
+            Discuter sur WhatsApp <i class="fa-brands fa-whatsapp"></i>
+          </a>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-left hover:shadow-xl transition duration-300">
+          <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl font-bold mb-6 shadow-md">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Garantie & Support 24/7</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-6">Service fiable et équipe dédiée disponible à tout moment.</p>
+          <a data-cms-wa-link href="https://wa.me/${cleanWaNum}" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition inline-flex items-center gap-2">
+            Nous Contacter <i class="fa-solid fa-headset"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>`;
+        replaceOrInsertSection("services", servicesSec);
+      }
+
+      if (
+        lowerPrompt.includes("a propos") ||
+        lowerPrompt.includes("momba") ||
+        lowerPrompt.includes("about") ||
+        lowerPrompt.includes("histoire") ||
+        lowerPrompt.includes("presentation")
+      ) {
+        const aboutSec = `
+  <section id="about" class="py-20 bg-slate-900 text-white border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider mb-4">
+          💡 À Propos de Nous
+        </span>
+        <h2 data-cms="aboutTitle" class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-6">
+          Excellence, Innovation & Engagement Client
+        </h2>
+        <p data-cms="aboutText" class="text-slate-300 text-base leading-relaxed mb-6">
+          Nous mettons notre savoir-faire au service de vos objectifs. Avec une approche moderne et centrée sur la qualité, nous vous offrons les meilleures solutions du marché.
+        </p>
+        <a data-cms-wa-link href="https://wa.me/${cleanWaNum}" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-3 rounded-xl transition inline-flex items-center gap-2">
+          <i class="fa-brands fa-whatsapp"></i> Discuter avec nous sur WhatsApp
+        </a>
+      </div>
+      <div class="bg-white/5 border border-white/10 p-8 rounded-3xl text-center backdrop-blur shadow-2xl">
+        <i class="fa-solid fa-award text-6xl text-amber-400 mb-6 block"></i>
+        <h3 class="text-2xl font-bold mb-3">Notre Engagement</h3>
+        <p class="text-slate-300 text-sm leading-relaxed">
+          Offrir des services irréprochables avec une transparence totale, un suivi personnalisé et une réactivité maximale.
+        </p>
+      </div>
+    </div>
+  </section>`;
+        replaceOrInsertSection("about", aboutSec);
+      }
+
+      if (
+        lowerPrompt.includes("galerie") ||
+        lowerPrompt.includes("gallery") ||
+        lowerPrompt.includes("produit") ||
+        lowerPrompt.includes("boutique") ||
+        lowerPrompt.includes("catalogue") ||
+        lowerPrompt.includes("sary") ||
+        lowerPrompt.includes("portfolio") ||
+        lowerPrompt.includes("menu") ||
+        lowerPrompt.includes("chambre")
+      ) {
+        const gallerySec = `
+  <section id="gallery" class="py-20 bg-slate-50 border-t border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 uppercase tracking-wider mb-4">
+        📸 Galerie & Catalogue Produit
+      </span>
+      <h2 data-cms="galleryTitle" class="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">Notre Sélection Exclusive</h2>
+      <p data-cms="gallerySubtitle" class="text-slate-600 max-w-2xl mx-auto mb-16 text-base">Découvrez nos produits et réalisations disponibles immédiatement.</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 flex flex-col">
+          <div class="h-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl">
+            <i class="fa-solid fa-box-open"></i>
+          </div>
+          <div class="p-6 flex-1 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-semibold uppercase text-indigo-600 tracking-wider">Modèle 1</span>
+              <h3 class="text-xl font-bold text-slate-900 mt-1 mb-2">Produit Premium Alpha</h3>
+              <p class="text-slate-600 text-sm mb-4">Finition de haute qualité conçue pour répondre à toutes vos exigences.</p>
+            </div>
+            <a data-cms-wa-link href="https://wa.me/${cleanWaNum}?text=Commander%20Produit%20Alpha" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+              <i class="fa-brands fa-whatsapp"></i> Commander via WhatsApp
+            </a>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 flex flex-col">
+          <div class="h-48 bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-4xl">
+            <i class="fa-solid fa-gem"></i>
+          </div>
+          <div class="p-6 flex-1 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-semibold uppercase text-emerald-600 tracking-wider">Modèle 2</span>
+              <h3 class="text-xl font-bold text-slate-900 mt-1 mb-2">Produit Premium Bêta</h3>
+              <p class="text-slate-600 text-sm mb-4">Option vedette offrant performance et durabilité à un prix compétitif.</p>
+            </div>
+            <a data-cms-wa-link href="https://wa.me/${cleanWaNum}?text=Commander%20Produit%20Beta" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+              <i class="fa-brands fa-whatsapp"></i> Commander via WhatsApp
+            </a>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 flex flex-col">
+          <div class="h-48 bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-4xl">
+            <i class="fa-solid fa-rocket"></i>
+          </div>
+          <div class="p-6 flex-1 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-semibold uppercase text-amber-600 tracking-wider">Modèle 3</span>
+              <h3 class="text-xl font-bold text-slate-900 mt-1 mb-2">Produit Premium Gamma</h3>
+              <p class="text-slate-600 text-sm mb-4">Nouveauté disponible dès aujourd'hui avec assistance et conseils inclus.</p>
+            </div>
+            <a data-cms-wa-link href="https://wa.me/${cleanWaNum}?text=Commander%20Produit%20Gamma" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+              <i class="fa-brands fa-whatsapp"></i> Commander via WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>`;
+        replaceOrInsertSection("gallery", gallerySec);
+      }
+
+      if (
+        lowerPrompt.includes("avis") ||
+        lowerPrompt.includes("temoignage") ||
+        lowerPrompt.includes("review") ||
+        lowerPrompt.includes("client")
+      ) {
+        const testimonialsSec = `
+  <section id="testimonials" class="py-20 bg-white border-t border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 uppercase tracking-wider mb-4">
+        ⭐ Témoignages Clients
+      </span>
+      <h2 data-cms="testimonialsTitle" class="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">Avis De Nos Clients</h2>
+      <p data-cms="testimonialsSubtitle" class="text-slate-600 max-w-2xl mx-auto mb-16 text-base">Leur satisfaction est notre meilleure recommandation.</p>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-left shadow-sm">
+          <div class="text-amber-400 text-lg mb-4">★★★★★</div>
+          <p class="text-slate-700 text-sm italic leading-relaxed mb-6">"Prestation de qualité supérieure, équipe à l'écoute et réactivité remarquable sur WhatsApp !"</p>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-sm">M</div>
+            <div>
+              <p class="font-bold text-slate-900 text-sm">Marie Rasoa</p>
+              <p class="text-xs text-slate-500">Client Régulier</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-left shadow-sm">
+          <div class="text-amber-400 text-lg mb-4">★★★★★</div>
+          <p class="text-slate-700 text-sm italic leading-relaxed mb-6">"Résultat impécable et respect total des exigences demandées. Je suis ravi !"</p>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm">J</div>
+            <div>
+              <p class="font-bold text-slate-900 text-sm">Jean-Luc R.</p>
+              <p class="text-xs text-slate-500">Partenaire</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-left shadow-sm">
+          <div class="text-amber-400 text-lg mb-4">★★★★★</div>
+          <p class="text-slate-700 text-sm italic leading-relaxed mb-6">"Excellente expérience de A à Z. Je n'hésiterai pas à faire appel à eux à nouveau."</p>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-sm">A</div>
+            <div>
+              <p class="font-bold text-slate-900 text-sm">Andry M.</p>
+              <p class="text-xs text-slate-500">Client Professionnel</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>`;
+        replaceOrInsertSection("testimonials", testimonialsSec);
+      }
+
+      if (
+        lowerPrompt.includes("faq") ||
+        lowerPrompt.includes("question") ||
+        lowerPrompt.includes("valiny")
+      ) {
+        const faqSec = `
+  <section id="faq" class="py-20 bg-slate-50 border-t border-slate-200">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 uppercase tracking-wider mb-4">
+          ❓ Foire Aux Questions
+        </span>
+        <h2 data-cms="faqTitle" class="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">Questions Fréquentes</h2>
+        <p data-cms="faqSubtitle" class="text-slate-600 text-base">Retrouvez les réponses rapides à vos questions principales.</p>
+      </div>
+      <div class="space-y-4">
+        <details class="bg-white border border-slate-200 rounded-xl p-6 group cursor-pointer shadow-sm">
+          <summary class="font-bold text-slate-900 flex justify-between items-center text-lg">
+            Comment passer une commande rapidement ?
+            <i class="fa-solid fa-chevron-down text-indigo-600 group-open:rotate-180 transition"></i>
+          </summary>
+          <p class="mt-4 text-slate-600 text-sm leading-relaxed border-t border-slate-100 pt-4">
+            Cliquez simplement sur l'un de nos boutons WhatsApp sur le site. Notre équipe recevra directement votre demande et vous répondra immédiatement.
+          </p>
+        </details>
+        <details class="bg-white border border-slate-200 rounded-xl p-6 group cursor-pointer shadow-sm">
+          <summary class="font-bold text-slate-900 flex justify-between items-center text-lg">
+            Proposez-vous une assistance personnalisée ?
+            <i class="fa-solid fa-chevron-down text-indigo-600 group-open:rotate-180 transition"></i>
+          </summary>
+          <p class="mt-4 text-slate-600 text-sm leading-relaxed border-t border-slate-100 pt-4">
+            Oui ! Nous accompagnons chaque client individuellement pour nous assurer que la solution apportée correspond exactement à ses besoins.
+          </p>
+        </details>
+      </div>
+    </div>
+  </section>`;
+        replaceOrInsertSection("faq", faqSec);
+      }
+
+      if (
+        lowerPrompt.includes("section") &&
+        !lowerPrompt.includes("service") &&
+        !lowerPrompt.includes("about") &&
+        lowerPrompt.includes("ajoute") || lowerPrompt.includes("créer") || lowerPrompt.includes("anova") || lowerPrompt.includes("modifier")
+      ) {
+        const customSecId = "sec-" + Date.now();
+        const customSec = `
+  <section id="${customSecId}" class="py-20 bg-slate-900 text-white border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider mb-4">
+        ✨ Nouvelle Section
+      </span>
+      <h2 class="text-3xl sm:text-4xl font-extrabold mb-4">${cleanPromptText.slice(0, 60)}</h2>
+      <p class="text-slate-300 max-w-2xl mx-auto mb-10 text-base leading-relaxed">
+        ${cleanPromptText}
+      </p>
+      <a data-cms-wa-link href="https://wa.me/${cleanWaNum}" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-3 rounded-xl transition inline-flex items-center gap-2">
+        <i class="fa-brands fa-whatsapp"></i> Discuter de cette section sur WhatsApp
+      </a>
+    </div>
+  </section>`;
+        insertSection(customSec);
+      }
+
+      if (!html.includes("<!-- DEVWEBIA_UPDATED -->")) {
+        html = html.replace("</body>", `<!-- DEVWEBIA_UPDATED -->\n<script>console.log("Site mis à jour par DEVWEBIA");</script>\n</body>`);
+      }
+
+      updatedFiles["index.html"] = html;
     }
 
     const payload = {
-      explanation: `Modification appliquée avec succès à votre site par l'IA DEVWEBIA pour la demande : "${prompt}". Tous les fichiers ont été mis à jour.`,
+      explanation: `Modification appliquée avec succès à votre site par DEVWEBIA pour la demande : "${prompt}". Les sections ont été créées/mises à jour.`,
       name: titleMatch,
       files: updatedFiles,
       questions: [],
@@ -3121,7 +3432,11 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     }
     messages.push({ role: "user", content: userMsg });
 
-    const geminiEnvKey = process.env.GEMINI_API_KEY || process.env.API_KEY || process.env.VITE_GEMINI_API_KEY;
+    const geminiEnvKey =
+      process.env.GEMINI_API_KEY ||
+      process.env.API_KEY ||
+      process.env.VITE_GEMINI_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     let result: { text: string; tokens: number } | null = null;
 
     if (useByok) {
