@@ -550,7 +550,7 @@ async function callAdminKey(
               systemInstruction: systemInstruction
                 ? { parts: [{ text: systemInstruction }] }
                 : undefined,
-              generationConfig: { temperature: 0.7, maxOutputTokens: 32768 },
+              generationConfig: { temperature: 0.7, max_tokens: 32768, maxOutputTokens: 32768 },
             }),
           },
         );
@@ -576,7 +576,7 @@ async function callAdminKey(
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, messages, temperature: 0.7 }),
+    body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 32768, max_tokens: 32768 }),
   });
   if (!res.ok) throw new Error(`${provider} ${res.status}: ${await res.text()}`);
   const json = await res.json();
@@ -592,7 +592,7 @@ async function callGateway(apiKey: string, messages: Array<{ role: string; conte
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages,
-      temperature: 0.7,
+      temperature: 0.7, max_tokens: 32768,
     }),
   });
 
@@ -3200,7 +3200,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
           body: JSON.stringify({
             model: "google/gemini-2.5-flash:free",
             messages,
-            temperature: 0.7,
+            temperature: 0.7, max_tokens: 32768,
           }),
         });
         if (res.ok) {

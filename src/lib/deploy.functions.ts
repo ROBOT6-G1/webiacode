@@ -24,9 +24,7 @@ export const publishSite = createServerFn({ method: "POST" })
   .validator((input: unknown) => z.object({ projectId: z.string() }).parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-
     const integ = await adminDb.getUserIntegrations(userId);
-
     const missing: string[] = [];
     if (!integ?.github_token) missing.push("Token GitHub");
     if (!integ?.github_username) missing.push("Nom d'utilisateur GitHub");
@@ -36,25 +34,21 @@ export const publishSite = createServerFn({ method: "POST" })
         `Configuration incomplète — allez sur /connections et renseignez : ${missing.join(", ")}.`,
       );
     }
-
     const project = await adminDb.getProject(data.projectId);
     if (!project) throw new Error("Projet introuvable");
-
     const files: Record<string, string> = project.files || {};
     if (!files["index.html"]) throw new Error("Aucun index.html à publier");
-
+    
     const ghToken = integ!.github_token!;
     const ghUser = integ!.github_username!;
     const vercelToken = integ!.vercel_token!;
     const vercelTeam = integ!.vercel_team_id?.trim() || null;
-
     const teamQS = vercelTeam ? `?teamId=${encodeURIComponent(vercelTeam)}` : "";
-
     const repoName =
       project.github_repo?.split("/").pop() ||
       `devwebia-${slugify(project.name)}-${data.projectId.slice(0, 6)}`;
     let repoFullName = project.github_repo ?? `${ghUser}/${repoName}`;
-
+    
     // Sync files to GitHub (best effort, non-blocking for Vercel deployment)
     try {
       let repoExists = false;
@@ -71,7 +65,6 @@ export const publishSite = createServerFn({ method: "POST" })
           repoFullName = project.github_repo;
         }
       }
-
       if (!repoExists) {
         const createRepoRes = await fetch("https://api.github.com/user/repos", {
           method: "POST",
@@ -88,7 +81,6 @@ export const publishSite = createServerFn({ method: "POST" })
             auto_init: true,
           }),
         });
-
         if (createRepoRes.ok) {
           const createJson = (await createRepoRes.json()) as { full_name?: string };
           repoFullName = createJson.full_name || `${ghUser}/${repoName}`;
@@ -100,36 +92,55 @@ export const publishSite = createServerFn({ method: "POST" })
         }
       }
 
-      for (const [path, content] of Object.entries(files)) {
-        const encodedPath = path
-          .split("/")
-          .map((p) => encodeURIComponent(p))
-          .join("/");
+      // Sync via Git Trees API (Atomic Commit)
+      let refRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/refs/heads/main`, {
+        headers: { Authorization: `Bearer ${ghToken}`, "User-Agent": "DEVWEBIA" },
+      });
+      if (refRes.status === 404) {
+        refRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/refs/heads/master`, {
+          headers: { Authorization: `Bearer ${ghToken}`, "User-Agent": "DEVWEBIA" },
+        });
+      }
 
-        let sha: string | undefined;
-        try {
-          const getRes = await fetch(
-            `https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`,
-            {
-              headers: {
-                Authorization: `Bearer ${ghToken}`,
-                Accept: "application/vnd.github+json",
-                "User-Agent": "DEVWEBIA",
-              },
-            },
-          );
-          if (getRes.ok) {
-            const j = (await getRes.json()) as { sha?: string };
-            sha = j.sha;
-          }
-        } catch {
-          // ignore get content error
-        }
+      if (refRes.ok) {
+        const refJson = (await refRes.json()) as any;
+        const commitSha = refJson.object.sha;
+        const branchRef = refJson.ref;
 
-        const putRes = await fetch(
-          `https://api.github.com/repos/${repoFullName}/contents/${encodedPath}`,
-          {
-            method: "PUT",
+        const commitRes = await fetch(
+          `https://api.github.com/repos/${repoFullName}/git/commits/${commitSha}`,
+          { headers: { Authorization: `Bearer ${ghToken}`, "User-Agent": "DEVWEBIA" } },
+        );
+        const commitJson = (await commitRes.json()) as any;
+        const baseTreeSha = commitJson.tree.sha;
+
+        const treeItems = Object.entries(files).map(([path, content]) => ({
+          path,
+          mode: "100644",
+          type: "blob",
+          content,
+        }));
+
+        const treeRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/trees`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${ghToken}`,
+            Accept: "application/vnd.github+json",
+            "User-Agent": "DEVWEBIA",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            base_tree: baseTreeSha,
+            tree: treeItems,
+          }),
+        });
+
+        if (treeRes.ok) {
+          const treeJson = (await treeRes.json()) as any;
+          const newTreeSha = treeJson.sha;
+
+          const newCommitRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/commits`, {
+            method: "POST",
             headers: {
               Authorization: `Bearer ${ghToken}`,
               Accept: "application/vnd.github+json",
@@ -137,21 +148,36 @@ export const publishSite = createServerFn({ method: "POST" })
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              message: `DEVWEBIA update ${path}`,
-              content: toBase64(content),
-              sha,
+              message: `DEVWEBIA site update (${Object.keys(files).length} files)`,
+              tree: newTreeSha,
+              parents: [commitSha],
             }),
-          },
-        );
+          });
 
-        if (!putRes.ok) {
-          console.warn(`GitHub upload warning for ${path}: ${putRes.status}`, await putRes.text());
+          if (newCommitRes.ok) {
+            const newCommitJson = (await newCommitRes.json()) as any;
+            const newCommitSha = newCommitJson.sha;
+
+            await fetch(`https://api.github.com/repos/${repoFullName}/git/${branchRef.replace('refs/', '')}`, {
+              method: "PATCH",
+              headers: {
+                Authorization: `Bearer ${ghToken}`,
+                Accept: "application/vnd.github+json",
+                "User-Agent": "DEVWEBIA",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                sha: newCommitSha,
+                force: true,
+              }),
+            });
+          }
         }
       }
     } catch (ghError) {
       console.warn("GitHub sync skipped due to error:", ghError);
     }
-
+    
     let vercelProjectId = project.vercel_project_id ?? null;
     if (!vercelProjectId) {
       const findRes = await fetch(
@@ -182,12 +208,12 @@ export const publishSite = createServerFn({ method: "POST" })
         vercelProjectId = j.id;
       }
     }
-
+    
     const deployFiles = Object.entries(files).map(([path, content]) => ({
       file: path,
       data: content,
     }));
-
+    
     const deployRes = await fetch(`https://api.vercel.com/v13/deployments${teamQS}`, {
       method: "POST",
       headers: {
@@ -196,24 +222,28 @@ export const publishSite = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         name: repoName,
-        project: vercelProjectId,
+        project: vercelProjectId,        
         target: "production",
         files: deployFiles,
         projectSettings: { framework: null },
       }),
     });
+    
     if (!deployRes.ok) {
       throw new Error(`Vercel deploy: ${deployRes.status} ${await deployRes.text()}`);
     }
+    
     const deployJson = (await deployRes.json()) as { url?: string; alias?: string[] };
-    const liveUrl = (deployJson.alias && deployJson.alias[0]) || deployJson.url || null;
+    
+    // Prioritize the unique deployment URL over the alias to bypass cache on first open
+    const liveUrl = deployJson.url || (deployJson.alias && deployJson.alias[0]) || null;
     const finalUrl = liveUrl ? `https://${liveUrl}` : null;
-
+    
     await adminDb.updateProject(data.projectId, {
       github_repo: repoFullName,
       vercel_project_id: vercelProjectId,
       vercel_url: finalUrl,
     });
-
+    
     return { url: finalUrl, repo: repoFullName };
   });
