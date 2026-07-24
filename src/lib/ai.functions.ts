@@ -3471,7 +3471,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
         const keys = await adminDb.getAdminKeys();
         if (keys && keys.length > 0) {
           for (const k of keys) {
-            if (k.active === false) continue;
+            if (k.active === false || !k.key_value || k.key_value === geminiEnvKey) continue;
             try {
               result = await callAdminKey(k.key_value, k.provider || "google", messages);
               if (result) {
@@ -3517,35 +3517,16 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     }
 
     if (!result) {
-      console.warn("API IA indisponible ou quota dépassé: utilisation du générateur de secours.");
-      result = generateDefaultFallbackSite({
-        prompt: data.prompt,
-        siteType: projectSiteType,
-        whatsapp: projectWhatsapp,
-        pwaEnabled: projectPwa,
-        firebaseConfig,
-        userPlan,
-        currentFiles,
-        language: data.language,
-        platformUrl: data.platformUrl,
-      });
+      throw new Error(
+        "Tsy afaka mifandray amin'ny IA Gemini (Quota dépassé na tsy misy Clé API manan-kery). Mba ampidiro ao amin'ny Panneau Admin (/admin) na Paramètres IA (/ai-settings) ny Clé API Gemini-nao manokana avy amin'ny Google AI Studio (https://aistudio.google.com/apikey) dia andramo indray.",
+      );
     }
 
-    let parsed = extractJson(result.text);
+    const parsed = extractJson(result.text);
     if (!parsed) {
-      console.warn("Format JSON IA invalide: régénération via le générateur de secours.");
-      result = generateDefaultFallbackSite({
-        prompt: data.prompt,
-        siteType: projectSiteType,
-        whatsapp: projectWhatsapp,
-        pwaEnabled: projectPwa,
-        firebaseConfig,
-        userPlan,
-        currentFiles,
-        language: data.language,
-        platformUrl: data.platformUrl,
-      });
-      parsed = extractJson(result.text);
+      throw new Error(
+        "Niteraka valiny amin'ny endrika tsy mety ny IA Gemini. Mba andramo averina indray na amboary kely ny hafatra alefanao.",
+      );
     }
 
     if (!parsed) throw new Error("Impossible de générer le site web. Veuillez réessayer.");
