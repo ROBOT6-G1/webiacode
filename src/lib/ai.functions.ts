@@ -495,7 +495,7 @@ function extractJson(text: string): GeneratedSite | null {
 }
 
 const PROVIDER_DEFAULT_MODEL: Record<string, string> = {
-  google: "gemini-2.5-flash",
+  google: "gemini-3.6-flash",
   groq: "llama-3.3-70b-versatile",
   openrouter: "meta-llama/llama-3.3-70b-instruct:free",
   mistral: "mistral-small-latest",
@@ -526,10 +526,12 @@ async function callAdminKey(
     const systemInstruction = messages.find((m) => m.role === "system")?.content;
 
     const candidateModels = [
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-2.5-flash",
       "gemini-2.0-flash",
       "gemini-1.5-flash",
-      "gemini-1.5-pro",
-      "gemini-2.5-flash",
     ];
     let lastErr: Error | null = null;
 
