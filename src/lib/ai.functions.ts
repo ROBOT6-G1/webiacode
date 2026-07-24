@@ -545,7 +545,7 @@ async function callAdminKey(
               systemInstruction: systemInstruction
                 ? { parts: [{ text: systemInstruction }] }
                 : undefined,
-              generationConfig: { temperature: 0.7, maxOutputTokens: 32768 },
+              generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
             }),
           },
         );
@@ -3330,7 +3330,7 @@ export const generateSite = createServerFn({ method: "POST" })
     const hasPersonalKey = !!(integ?.ai_provider && integ?.ai_api_key);
     const subActive =
       !!profile?.ai_sub_expires_at && new Date(profile.ai_sub_expires_at).getTime() > Date.now();
-    const useByok = hasPersonalKey && subActive;
+    const useByok = hasPersonalKey || subActive;
 
     if (!useByok && (profile?.credits ?? 0) < 1) throw new Error("insufficient_credits");
 
@@ -3446,23 +3446,11 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
       process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     let result: { text: string; tokens: number } | null = null;
 
-    if (useByok) {
+    if (hasPersonalKey) {
       try {
         result = await callAdminKey(integ!.ai_api_key!, integ!.ai_provider!, messages);
       } catch (err) {
-        console.warn("BYOK failed:", err);
-      }
-    }
-
-    if (!result && geminiEnvKey) {
-      try {
-        result = await callAdminKey(geminiEnvKey, "google", messages);
-        // Sync system key to Firestore so deployed apps (e.g. Vercel) can access it directly
-        adminDb
-          .syncSystemKeyToFirestore()
-          .catch((err) => console.warn("Background sync error:", err));
-      } catch (err) {
-        console.warn("System GEMINI_API_KEY failed:", err);
+        console.warn("BYOK key failed:", err);
       }
     }
 
@@ -3489,6 +3477,18 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
         }
       } catch (dbErr) {
         console.warn("Failed retrieving admin keys:", dbErr);
+      }
+    }
+
+    if (!result && geminiEnvKey) {
+      try {
+        result = await callAdminKey(geminiEnvKey, "google", messages);
+        // Sync system key to Firestore so deployed apps (e.g. Vercel) can access it directly
+        adminDb
+          .syncSystemKeyToFirestore()
+          .catch((err) => console.warn("Background sync error:", err));
+      } catch (err) {
+        console.warn("System GEMINI_API_KEY failed:", err);
       }
     }
 
