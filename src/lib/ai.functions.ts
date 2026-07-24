@@ -547,7 +547,7 @@ async function callAdminKey(
               systemInstruction: systemInstruction
                 ? { parts: [{ text: systemInstruction }] }
                 : undefined,
-              generationConfig: { temperature: 0.7, max_tokens: 32768, maxOutputTokens: 32768 },
+              generationConfig: { temperature: 0.7, maxOutputTokens: 32768 },
             }),
           },
         );
@@ -573,7 +573,7 @@ async function callAdminKey(
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 32768, max_tokens: 32768 }),
+    body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 32768 }),
   });
   if (!res.ok) throw new Error(`${provider} ${res.status}: ${await res.text()}`);
   const json = await res.json();
