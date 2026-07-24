@@ -82,7 +82,7 @@ export const adminDb = {
       process.env.VITE_GEMINI_API_KEY ||
       process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-    if (sysKey && !sysKey.startsWith("AQ.") && !keys.some((k) => k.key_value === sysKey)) {
+    if (sysKey && !keys.some((k) => k.key_value === sysKey)) {
       keys.unshift({
         id: "sys_env_key",
         label: "Clé Système Gemini",
@@ -92,7 +92,7 @@ export const adminDb = {
       });
     }
 
-    return keys.filter((k) => !(k.key_value as string)?.startsWith("AQ."));
+    return keys;
   },
 
   async syncSystemKeyToFirestore() {
@@ -105,7 +105,7 @@ export const adminDb = {
       process.env.VITE_GEMINI_API_KEY ||
       process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-    if (!sysKey || sysKey.startsWith("AQ.")) return;
+    if (!sysKey) return;
 
     try {
       const snap = await getDocs(collection(db, "admin_gemini_keys"));

@@ -527,12 +527,9 @@ async function callAdminKey(
 
     const candidateModels = [
       "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
       "gemini-1.5-flash",
       "gemini-1.5-pro",
-      "gemini-2.5-flash",
-      "gemini-3.6-flash",
-      "gemini-3.5-flash",
-      "gemini-3.1-flash-lite",
     ];
     let lastErr: Error | null = null;
 
@@ -3520,17 +3517,35 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     }
 
     if (!result) {
-      throw new Error(
-        "Impossible de contacter le service IA Gemini. Veuillez vérifier ou ajouter votre clé API Gemini dans le panneau Admin (/admin) ou Paramètres IA (/ai-settings) puis réessayez.",
-      );
+      console.warn("API IA indisponible ou quota dépassé: utilisation du générateur de secours.");
+      result = generateDefaultFallbackSite({
+        prompt: data.prompt,
+        siteType: projectSiteType,
+        whatsapp: projectWhatsapp,
+        pwaEnabled: projectPwa,
+        firebaseConfig,
+        userPlan,
+        currentFiles,
+        language: data.language,
+        platformUrl: data.platformUrl,
+      });
     }
 
-    const parsed = extractJson(result.text);
+    let parsed = extractJson(result.text);
     if (!parsed) {
-      console.warn("Failed parsing AI JSON output.");
-      throw new Error(
-        "L'IA Gemini a généré une réponse mais le format JSON est invalide. Veuillez réorganiser votre demande et réessayer.",
-      );
+      console.warn("Format JSON IA invalide: régénération via le générateur de secours.");
+      result = generateDefaultFallbackSite({
+        prompt: data.prompt,
+        siteType: projectSiteType,
+        whatsapp: projectWhatsapp,
+        pwaEnabled: projectPwa,
+        firebaseConfig,
+        userPlan,
+        currentFiles,
+        language: data.language,
+        platformUrl: data.platformUrl,
+      });
+      parsed = extractJson(result.text);
     }
 
     if (!parsed) throw new Error("Impossible de générer le site web. Veuillez réessayer.");

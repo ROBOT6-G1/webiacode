@@ -15,6 +15,12 @@ export default defineConfig({
   },
   nitro: false,
   vite: {
+    define: {
+      "process.env.GEMINI_API_KEY": JSON.stringify(process.env.GEMINI_API_KEY || ""),
+      "process.env.VITE_GEMINI_API_KEY": JSON.stringify(
+        process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || "",
+      ),
+    },
     plugins: [
       nitro({
         preset: process.env.VERCEL || process.env.VERCEL_ENV ? "vercel" : "node-server",
