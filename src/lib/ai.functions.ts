@@ -582,7 +582,6 @@ async function callAdminKey(
   return { text, tokens };
 }
 
-
 function generateDefaultFallbackSite(params: {
   prompt: string;
   siteType: SiteType;
@@ -684,7 +683,10 @@ if (typeof firebase !== 'undefined') {
         } else if (html.includes("</main>")) {
           html = html.replace("</main>", `${sectionHtml}\n</main>`);
         } else if (html.includes('<script src="firebase.js">')) {
-          html = html.replace('<script src="firebase.js">', `${sectionHtml}\n<script src="firebase.js">`);
+          html = html.replace(
+            '<script src="firebase.js">',
+            `${sectionHtml}\n<script src="firebase.js">`,
+          );
         } else if (html.includes("</body>")) {
           html = html.replace("</body>", `${sectionHtml}\n</body>`);
         } else {
@@ -693,7 +695,10 @@ if (typeof firebase !== 'undefined') {
       };
 
       const replaceOrInsertSection = (sectionId: string, sectionHtml: string) => {
-        const sectionRegex = new RegExp(`<section[^>]*id=["']${sectionId}["'][\\s\\S]*?<\\/section>`, "gi");
+        const sectionRegex = new RegExp(
+          `<section[^>]*id=["']${sectionId}["'][\\s\\S]*?<\\/section>`,
+          "gi",
+        );
         if (sectionRegex.test(html)) {
           html = html.replace(sectionRegex, sectionHtml);
         } else {
@@ -703,8 +708,14 @@ if (typeof firebase !== 'undefined') {
 
       // 1. Update Title / Brand if user specified name
       if (titleMatch && titleMatch !== "Mon Entreprise") {
-        html = html.replace(/<title data-cms="siteTitle">.*?<\/title>/gi, `<title data-cms="siteTitle">${titleMatch}</title>`);
-        html = html.replace(/<span data-cms="siteTitle">.*?<\/span>/gi, `<span data-cms="siteTitle">${titleMatch}</span>`);
+        html = html.replace(
+          /<title data-cms="siteTitle">.*?<\/title>/gi,
+          `<title data-cms="siteTitle">${titleMatch}</title>`,
+        );
+        html = html.replace(
+          /<span data-cms="siteTitle">.*?<\/span>/gi,
+          `<span data-cms="siteTitle">${titleMatch}</span>`,
+        );
       }
 
       // 2. Section additions based on prompt keywords
@@ -962,10 +973,13 @@ if (typeof firebase !== 'undefined') {
       }
 
       if (
-        lowerPrompt.includes("section") &&
-        !lowerPrompt.includes("service") &&
-        !lowerPrompt.includes("about") &&
-        lowerPrompt.includes("ajoute") || lowerPrompt.includes("créer") || lowerPrompt.includes("anova") || lowerPrompt.includes("modifier")
+        (lowerPrompt.includes("section") &&
+          !lowerPrompt.includes("service") &&
+          !lowerPrompt.includes("about") &&
+          lowerPrompt.includes("ajoute")) ||
+        lowerPrompt.includes("créer") ||
+        lowerPrompt.includes("anova") ||
+        lowerPrompt.includes("modifier")
       ) {
         const customSecId = "sec-" + Date.now();
         const customSec = `
@@ -987,7 +1001,10 @@ if (typeof firebase !== 'undefined') {
       }
 
       if (!html.includes("<!-- DEVWEBIA_UPDATED -->")) {
-        html = html.replace("</body>", `<!-- DEVWEBIA_UPDATED -->\n<script>console.log("Site mis à jour par DEVWEBIA");</script>\n</body>`);
+        html = html.replace(
+          "</body>",
+          `<!-- DEVWEBIA_UPDATED -->\n<script>console.log("Site mis à jour par DEVWEBIA");</script>\n</body>`,
+        );
       }
 
       updatedFiles["index.html"] = html;
@@ -3448,7 +3465,9 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
       try {
         result = await callAdminKey(geminiEnvKey, "google", messages);
         // Sync system key to Firestore so deployed apps (e.g. Vercel) can access it directly
-        adminDb.syncSystemKeyToFirestore().catch((err) => console.warn("Background sync error:", err));
+        adminDb
+          .syncSystemKeyToFirestore()
+          .catch((err) => console.warn("Background sync error:", err));
       } catch (err) {
         console.warn("System GEMINI_API_KEY failed:", err);
       }
@@ -3488,7 +3507,8 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
           body: JSON.stringify({
             model: "google/gemini-2.0-flash-001",
             messages,
-            temperature: 0.7, max_tokens: 32768,
+            temperature: 0.7,
+            max_tokens: 32768,
           }),
         });
         if (res.ok) {
@@ -3504,13 +3524,17 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     }
 
     if (!result) {
-      throw new Error("Impossible de contacter le service IA Gemini. Veuillez vérifier votre clé API Gemini ou votre connexion puis réessayez.");
+      throw new Error(
+        "Impossible de contacter le service IA Gemini. Veuillez vérifier votre clé API Gemini ou votre connexion puis réessayez.",
+      );
     }
 
-    let parsed = extractJson(result.text);
+    const parsed = extractJson(result.text);
     if (!parsed) {
       console.warn("Failed parsing AI JSON output.");
-      throw new Error("L'IA Gemini a généré une réponse mais le format JSON est invalide. Veuillez réorganiser votre demande et réessayer.");
+      throw new Error(
+        "L'IA Gemini a généré une réponse mais le format JSON est invalide. Veuillez réorganiser votre demande et réessayer.",
+      );
     }
 
     if (!parsed) throw new Error("Impossible de générer le site web. Veuillez réessayer.");

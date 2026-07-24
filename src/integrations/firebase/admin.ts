@@ -53,7 +53,7 @@ export const adminDb = {
     } catch (e) {
       console.warn("Failed syncing system key to Firestore:", e);
     }
-    let keys: any[] = [];
+    let keys: Array<{ id: string; active?: boolean; [key: string]: unknown }> = [];
     try {
       const q = query(collection(db, "admin_gemini_keys"), where("active", "==", true));
       const snap = await getDocs(q);
@@ -67,7 +67,7 @@ export const adminDb = {
         const snapAll = await getDocs(collection(db, "admin_gemini_keys"));
         keys = snapAll.docs
           .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((k: any) => k.active !== false);
+          .filter((k) => k.active !== false);
       } catch (errAll) {
         console.warn("Full fetch failed:", errAll);
       }

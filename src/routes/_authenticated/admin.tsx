@@ -549,14 +549,22 @@ function KeysTab() {
           🚀 Configuration Clé API pour Vercel / Déploiement
         </p>
         <p>
-          Pour que la création et modification automatique de toutes les sections de site par l'IA fonctionne à 100% sur Vercel :
+          Pour que la création et modification automatique de toutes les sections de site par l'IA
+          fonctionne à 100% sur Vercel :
         </p>
         <ul className="list-disc pl-4 space-y-1 font-medium">
           <li>
-            <strong>Option 1 (Recommandée) :</strong> Ajoutez votre clé <strong>Google Gemini API Key</strong> ci-dessous dans ce panneau. Elle sera stockée en toute sécurité dans Firestore et utilisée sur Vercel.
+            <strong>Option 1 (Recommandée) :</strong> Ajoutez votre clé{" "}
+            <strong>Google Gemini API Key</strong> ci-dessous dans ce panneau. Elle sera stockée en
+            toute sécurité dans Firestore et utilisée sur Vercel.
           </li>
           <li>
-            <strong>Option 2 :</strong> Dans les paramètres de votre projet Vercel (<em>Settings &gt; Environment Variables</em>), ajoutez la variable <code className="bg-indigo-100 dark:bg-indigo-900/60 px-1 py-0.5 rounded text-indigo-800 dark:text-indigo-200 font-mono">GEMINI_API_KEY</code>.
+            <strong>Option 2 :</strong> Dans les paramètres de votre projet Vercel (
+            <em>Settings &gt; Environment Variables</em>), ajoutez la variable{" "}
+            <code className="bg-indigo-100 dark:bg-indigo-900/60 px-1 py-0.5 rounded text-indigo-800 dark:text-indigo-200 font-mono">
+              GEMINI_API_KEY
+            </code>
+            .
           </li>
         </ul>
       </div>

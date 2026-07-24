@@ -38,7 +38,7 @@ export const publishSite = createServerFn({ method: "POST" })
     if (!project) throw new Error("Projet introuvable");
     const files: Record<string, string> = project.files || {};
     if (!files["index.html"]) throw new Error("Aucun index.html à publier");
-    
+
     const ghToken = integ!.github_token!;
     const ghUser = integ!.github_username!;
     const vercelToken = integ!.vercel_token!;
@@ -48,7 +48,7 @@ export const publishSite = createServerFn({ method: "POST" })
       project.github_repo?.split("/").pop() ||
       `devwebia-${slugify(project.name)}-${data.projectId.slice(0, 6)}`;
     let repoFullName = project.github_repo ?? `${ghUser}/${repoName}`;
-    
+
     // Sync files to GitHub (best effort, non-blocking for Vercel deployment)
     try {
       let repoExists = false;
@@ -103,7 +103,7 @@ export const publishSite = createServerFn({ method: "POST" })
       }
 
       if (refRes.ok) {
-        const refJson = (await refRes.json()) as any;
+        const refJson = (await refRes.json()) as { object: { sha: string }; ref: string };
         const commitSha = refJson.object.sha;
         const branchRef = refJson.ref;
 
@@ -111,7 +111,7 @@ export const publishSite = createServerFn({ method: "POST" })
           `https://api.github.com/repos/${repoFullName}/git/commits/${commitSha}`,
           { headers: { Authorization: `Bearer ${ghToken}`, "User-Agent": "DEVWEBIA" } },
         );
-        const commitJson = (await commitRes.json()) as any;
+        const commitJson = (await commitRes.json()) as { tree: { sha: string } };
         const baseTreeSha = commitJson.tree.sha;
 
         const treeItems = Object.entries(files).map(([path, content]) => ({
@@ -136,30 +136,13 @@ export const publishSite = createServerFn({ method: "POST" })
         });
 
         if (treeRes.ok) {
-          const treeJson = (await treeRes.json()) as any;
+          const treeJson = (await treeRes.json()) as { sha: string };
           const newTreeSha = treeJson.sha;
 
-          const newCommitRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/commits`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${ghToken}`,
-              Accept: "application/vnd.github+json",
-              "User-Agent": "DEVWEBIA",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              message: `DEVWEBIA site update (${Object.keys(files).length} files)`,
-              tree: newTreeSha,
-              parents: [commitSha],
-            }),
-          });
-
-          if (newCommitRes.ok) {
-            const newCommitJson = (await newCommitRes.json()) as any;
-            const newCommitSha = newCommitJson.sha;
-
-            await fetch(`https://api.github.com/repos/${repoFullName}/git/${branchRef.replace('refs/', '')}`, {
-              method: "PATCH",
+          const newCommitRes = await fetch(
+            `https://api.github.com/repos/${repoFullName}/git/commits`,
+            {
+              method: "POST",
               headers: {
                 Authorization: `Bearer ${ghToken}`,
                 Accept: "application/vnd.github+json",
@@ -167,17 +150,40 @@ export const publishSite = createServerFn({ method: "POST" })
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                sha: newCommitSha,
-                force: true,
+                message: `DEVWEBIA site update (${Object.keys(files).length} files)`,
+                tree: newTreeSha,
+                parents: [commitSha],
               }),
-            });
+            },
+          );
+
+          if (newCommitRes.ok) {
+            const newCommitJson = (await newCommitRes.json()) as { sha: string };
+            const newCommitSha = newCommitJson.sha;
+
+            await fetch(
+              `https://api.github.com/repos/${repoFullName}/git/${branchRef.replace("refs/", "")}`,
+              {
+                method: "PATCH",
+                headers: {
+                  Authorization: `Bearer ${ghToken}`,
+                  Accept: "application/vnd.github+json",
+                  "User-Agent": "DEVWEBIA",
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  sha: newCommitSha,
+                  force: true,
+                }),
+              },
+            );
           }
         }
       }
     } catch (ghError) {
       console.warn("GitHub sync skipped due to error:", ghError);
     }
-    
+
     let vercelProjectId = project.vercel_project_id ?? null;
     if (!vercelProjectId) {
       const findRes = await fetch(
@@ -208,12 +214,12 @@ export const publishSite = createServerFn({ method: "POST" })
         vercelProjectId = j.id;
       }
     }
-    
+
     const deployFiles = Object.entries(files).map(([path, content]) => ({
       file: path,
       data: content,
     }));
-    
+
     const deployRes = await fetch(`https://api.vercel.com/v13/deployments${teamQS}`, {
       method: "POST",
       headers: {
@@ -222,28 +228,28 @@ export const publishSite = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         name: repoName,
-        project: vercelProjectId,        
+        project: vercelProjectId,
         target: "production",
         files: deployFiles,
         projectSettings: { framework: null },
       }),
     });
-    
+
     if (!deployRes.ok) {
       throw new Error(`Vercel deploy: ${deployRes.status} ${await deployRes.text()}`);
     }
-    
+
     const deployJson = (await deployRes.json()) as { url?: string; alias?: string[] };
-    
+
     // Prioritize the unique deployment URL over the alias to bypass cache on first open
     const liveUrl = deployJson.url || (deployJson.alias && deployJson.alias[0]) || null;
     const finalUrl = liveUrl ? `https://${liveUrl}` : null;
-    
+
     await adminDb.updateProject(data.projectId, {
       github_repo: repoFullName,
       vercel_project_id: vercelProjectId,
       vercel_url: finalUrl,
     });
-    
+
     return { url: finalUrl, repo: repoFullName };
   });

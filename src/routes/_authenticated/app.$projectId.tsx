@@ -30,12 +30,15 @@ export const Route = createFileRoute("/_authenticated/app/$projectId")({
   component: ProjectView,
 });
 
-function buildPreviewHtml(files: Record<string, string>): string {
-  const index = files["index.html"];
-  if (!index) {
-    return "<html><body style='display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#888'>Aucun contenu</body></html>";
+function buildPreviewHtml(
+  files: Record<string, string>,
+  activeFile: string = "index.html",
+): string {
+  const content = files[activeFile] || files["index.html"];
+  if (!content) {
+    return "<html><body style='display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#888'>Aucun contenu HTML trouvé</body></html>";
   }
-  let html = index;
+  let html = content;
   html = html.replace(
     /<link([^>]*?)href=["']([^"']+)["']([^>]*)>/gi,
     (match, before: string, href: string, after: string) => {
@@ -57,7 +60,31 @@ function buildPreviewHtml(files: Record<string, string>): string {
       return `<script${attrs} data-src="${key}">${files[key]}</script>`;
     },
   );
-  return html;
+
+  const navScript = `
+<script>
+  (function() {
+    document.addEventListener('click', function(e) {
+      var a = e.target.closest('a');
+      if (a) {
+        var href = a.getAttribute('href') || '';
+        if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//') || href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('javascript:')) return;
+        var clean = href.replace(/^\\.\\//, '').split('#')[0].split('?')[0];
+        if (clean) {
+          e.preventDefault();
+          if (!clean.endsWith('.html') && clean.indexOf('.') === -1) clean += '.html';
+          window.parent.postMessage({ type: 'PREVIEW_NAVIGATE', file: clean }, '*');
+        }
+      }
+    });
+  })();
+</script>
+`;
+
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${navScript}</body>`);
+  }
+  return html + navScript;
 }
 
 type ProjectRow = {
@@ -125,6 +152,7 @@ function ProjectView() {
   };
   const [publishing, setPublishing] = useState(false);
   const [upToDate, setUpToDate] = useState(false);
+  const [activePreviewFile, setActivePreviewFile] = useState("index.html");
   const [tab, setTab] = useState("chat");
   const [streamFile, setStreamFile] = useState<{ path: string; content: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -195,14 +223,16 @@ function ProjectView() {
         setUpToDate(false);
         // Déploiement automatique en arrière-plan si déjà connecté à GitHub/Vercel
         if (project.data?.github_repo || project.data?.vercel_project_id) {
-          publishSite({ data: { projectId }, headers }).then((res) => {
-            if (isMounted.current) {
-              setUpToDate(true);
-              toast.success("Mise à jour déployée automatiquement !");
-            }
-          }).catch((err) => {
-            console.warn("Auto-deploy skipped or failed", err);
-          });
+          publishSite({ data: { projectId }, headers })
+            .then((res) => {
+              if (isMounted.current) {
+                setUpToDate(true);
+                toast.success("Mise à jour déployée automatiquement !");
+              }
+            })
+            .catch((err) => {
+              console.warn("Auto-deploy skipped or failed", err);
+            });
         }
       }
       await queryClient.invalidateQueries();
@@ -276,7 +306,29 @@ function ProjectView() {
   };
 
   const filesMap = getFilesMap(project.data);
-  const fullHtml = buildPreviewHtml(filesMap);
+
+  useEffect(() => {
+    const handleMsg = (e: MessageEvent) => {
+      if (e.data && e.data.type === "PREVIEW_NAVIGATE" && typeof e.data.file === "string") {
+        const target = e.data.file;
+        if (filesMap[target]) {
+          setActivePreviewFile(target);
+        } else {
+          toast.error(`Le fichier "${target}" n'a pas encore été généré.`);
+        }
+      }
+    };
+    window.addEventListener("message", handleMsg);
+    return () => window.removeEventListener("message", handleMsg);
+  }, [filesMap]);
+
+  const htmlFiles = useMemo(() => {
+    return Object.keys(filesMap)
+      .filter((f) => f.endsWith(".html"))
+      .sort((a, b) => (a === "index.html" ? -1 : b === "index.html" ? 1 : a.localeCompare(b)));
+  }, [filesMap]);
+
+  const fullHtml = buildPreviewHtml(filesMap, activePreviewFile);
   const filePaths = Object.keys(filesMap).sort((a, b) =>
     a === "index.html" ? -1 : b === "index.html" ? 1 : a.localeCompare(b),
   );
@@ -297,13 +349,7 @@ function ProjectView() {
   }, [messages.data]);
 
   const alreadyPublished = !!project.data?.vercel_url;
-  const publishLabel = publishing
-    ? "Publication…"
-    : alreadyPublished
-      ? upToDate
-        ? "À jour"
-        : "Mettre à jour"
-      : "Publier";
+  const publishLabel = publishing ? "Publication…" : alreadyPublished ? "Mettre à jour" : "Publier";
 
   return (
     <div className="h-[calc(100vh-3.5rem)] flex flex-col">
@@ -336,16 +382,9 @@ function ProjectView() {
               <Download className="h-4 w-4 mr-1.5" />
               ZIP
             </Button>
-            <Button
-              size="sm"
-              onClick={doPublish}
-              disabled={publishing || (alreadyPublished && upToDate)}
-              variant={alreadyPublished && upToDate ? "outline" : "default"}
-            >
+            <Button size="sm" onClick={doPublish} disabled={publishing} variant="default">
               {publishing ? (
                 <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : alreadyPublished && upToDate ? (
-                <CheckCircle2 className="h-4 w-4 mr-1.5 text-green-500" />
               ) : (
                 <Rocket className="h-4 w-4 mr-1.5" />
               )}
@@ -487,13 +526,55 @@ function ProjectView() {
           </div>
         </TabsContent>
 
-        <TabsContent value="preview" className="flex-1 m-0 bg-white">
-          <iframe
-            title="preview"
-            srcDoc={fullHtml}
-            className="w-full h-full border-0"
-            sandbox="allow-scripts"
-          />
+        <TabsContent value="preview" className="flex-1 m-0 flex flex-col bg-white overflow-hidden">
+          {htmlFiles.length > 0 && (
+            <div className="bg-slate-100 dark:bg-slate-900 border-b border-border px-4 py-2 flex items-center justify-between gap-2 shrink-0 text-xs">
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                <span className="font-semibold text-muted-foreground mr-1">Page :</span>
+                {htmlFiles.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setActivePreviewFile(f)}
+                    className={`px-3 py-1 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+                      activePreviewFile === f ||
+                      (!filesMap[activePreviewFile] && f === "index.html")
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-background text-foreground hover:bg-accent border border-border"
+                    }`}
+                  >
+                    {f === "index.html"
+                      ? "🌐 Site Public (index.html)"
+                      : f === "admin.html"
+                        ? "🔐 Espace Admin (admin.html)"
+                        : f}
+                  </button>
+                ))}
+              </div>
+              {project.data?.vercel_url && (
+                <a
+                  href={
+                    activePreviewFile === "index.html"
+                      ? project.data.vercel_url
+                      : `${project.data.vercel_url.replace(/\/$/, "")}/${activePreviewFile}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1 font-medium shrink-0"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Ouvrir la page
+                </a>
+              )}
+            </div>
+          )}
+          <div className="flex-1 w-full h-full relative">
+            <iframe
+              title="preview"
+              srcDoc={fullHtml}
+              className="w-full h-full border-0 absolute inset-0"
+              sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="code" className="flex-1 m-0 overflow-auto">
