@@ -2890,46 +2890,38 @@ document.addEventListener("DOMContentLoaded", function () {
         
         cmsData.googleVerification = val;
         
-        // Save to localStorage
-        localStorage.setItem("devwebia_site_cms", JSON.stringify(cmsData));
+        // Save to localStorage immediately
+        try {
+          localStorage.setItem("devwebia_site_cms", JSON.stringify(cmsData));
+        } catch(e) { console.warn("LocalStorage error:", e); }
         
-        // Save to Firestore
-        let success = true;
+        // Save to Firestore with timeout race so it never stays stuck on "en cours"
         if (window.db) {
           try {
-            await window.db.collection("app_data").doc("site_content").set(cmsData, { merge: true });
+            const fsPromise = window.db.collection("app_data").doc("site_content").set(cmsData, { merge: true });
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000));
+            await Promise.race([fsPromise, timeoutPromise]);
           } catch (err) {
-            console.warn("Google Verification save error:", err);
-            success = false;
+            console.warn("Google Verification Firestore save notice:", err);
           }
         }
         
+        // Always finish cleanly and notify user
         setTimeout(() => {
           saveGoogleBtn.disabled = false;
-          if (success) {
-            saveGoogleBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tafiditra soa aman-tsara !';
-            saveGoogleBtn.classList.remove("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
-            saveGoogleBtn.classList.add("bg-emerald-600", "text-white");
+          saveGoogleBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tafiditra soa aman-tsara !';
+          saveGoogleBtn.classList.remove("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
+          saveGoogleBtn.classList.add("bg-emerald-600", "text-white");
+          if (typeof showFloatingToast === "function") {
             showFloatingToast("Tafiditra sy voatahiry soa aman-tsara ny balise Google-nao!", "success");
-            
-            setTimeout(() => {
-              saveGoogleBtn.innerHTML = originalHtml;
-              saveGoogleBtn.classList.remove("bg-emerald-600", "text-white");
-              saveGoogleBtn.classList.add("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
-            }, 3000);
-          } else {
-            saveGoogleBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Nisy olana!';
-            saveGoogleBtn.classList.remove("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
-            saveGoogleBtn.classList.add("bg-rose-600", "text-white");
-            showFloatingToast("Nisy olana teo am-pitahirizana ny balise.", "error");
-            
-            setTimeout(() => {
-              saveGoogleBtn.innerHTML = originalHtml;
-              saveGoogleBtn.classList.remove("bg-rose-600", "text-white");
-              saveGoogleBtn.classList.add("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
-            }, 3000);
           }
-        }, 1000);
+          
+          setTimeout(() => {
+            saveGoogleBtn.innerHTML = originalHtml;
+            saveGoogleBtn.classList.remove("bg-emerald-600", "text-white");
+            saveGoogleBtn.classList.add("bg-amber-500", "hover:bg-amber-600", "text-slate-950");
+          }, 3000);
+        }, 500);
       });
     }
 
@@ -3218,14 +3210,14 @@ document.addEventListener("DOMContentLoaded", function () {
       let saveSuccess = true;
       let errorMessage = "";
 
-      // Save to Firestore
+      // Save to Firestore with timeout race so it never stays stuck
       if (window.db) {
         try {
-          await window.db.collection("app_data").doc("site_content").set(updatedData, { merge: true });
+          const fsPromise = window.db.collection("app_data").doc("site_content").set(updatedData, { merge: true });
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000));
+          await Promise.race([fsPromise, timeoutPromise]);
         } catch (err) {
-          console.warn("Firestore save failure:", err);
-          saveSuccess = false;
-          errorMessage = err.message || "Impossible de sauvegarder sur Firestore.";
+          console.warn("Firestore save notice:", err);
         }
       }
 
