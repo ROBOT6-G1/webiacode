@@ -526,15 +526,12 @@ async function callAdminKey(
     const systemInstruction = messages.find((m) => m.role === "system")?.content;
 
     const candidateModels = [
-      "gemini-2.5-flash",
       "gemini-3.6-flash",
       "gemini-3.5-flash",
-      "gemini-2.5-flash-lite",
       "gemini-flash-latest",
+      "gemini-3.1-flash-lite",
       "gemini-2.0-flash",
-      "gemini-1.5-flash",
       "gemini-2.5-pro",
-      "gemini-1.5-pro",
     ];
     let lastErr: Error | null = null;
 
@@ -3489,7 +3486,7 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash:free",
+            model: "google/gemini-2.0-flash-001",
             messages,
             temperature: 0.7, max_tokens: 32768,
           }),
@@ -3507,35 +3504,13 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     }
 
     if (!result) {
-      console.info("Fallback to DEVWEBIA Default AI Generator System");
-      result = generateDefaultFallbackSite({
-        prompt: data.prompt,
-        siteType: projectSiteType,
-        whatsapp: projectWhatsapp,
-        pwaEnabled: projectPwa,
-        firebaseConfig,
-        userPlan,
-        currentFiles,
-        language: data.language,
-        platformUrl: data.platformUrl,
-      });
+      throw new Error("Impossible de contacter le service IA Gemini. Veuillez vérifier votre clé API Gemini ou votre connexion puis réessayez.");
     }
 
     let parsed = extractJson(result.text);
     if (!parsed) {
-      console.warn("Failed parsing AI JSON output, falling back to default site generator.");
-      const fallbackResult = generateDefaultFallbackSite({
-        prompt: data.prompt,
-        siteType: projectSiteType,
-        whatsapp: projectWhatsapp,
-        pwaEnabled: projectPwa,
-        firebaseConfig,
-        userPlan,
-        currentFiles,
-        language: data.language,
-        platformUrl: data.platformUrl,
-      });
-      parsed = extractJson(fallbackResult.text);
+      console.warn("Failed parsing AI JSON output.");
+      throw new Error("L'IA Gemini a généré une réponse mais le format JSON est invalide. Veuillez réorganiser votre demande et réessayer.");
     }
 
     if (!parsed) throw new Error("Impossible de générer le site web. Veuillez réessayer.");

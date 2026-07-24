@@ -53,9 +53,43 @@ export const adminDb = {
     } catch (e) {
       console.warn("Failed syncing system key to Firestore:", e);
     }
-    const q = query(collection(db, "admin_gemini_keys"), where("active", "==", true));
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    let keys: any[] = [];
+    try {
+      const q = query(collection(db, "admin_gemini_keys"), where("active", "==", true));
+      const snap = await getDocs(q);
+      keys = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+      console.warn("Query with active==true failed, trying full fetch:", err);
+    }
+
+    if (keys.length === 0) {
+      try {
+        const snapAll = await getDocs(collection(db, "admin_gemini_keys"));
+        keys = snapAll.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((k: any) => k.active !== false);
+      } catch (errAll) {
+        console.warn("Full fetch failed:", errAll);
+      }
+    }
+
+    const sysKey =
+      process.env.GEMINI_API_KEY ||
+      process.env.API_KEY ||
+      process.env.VITE_GEMINI_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+
+    if (sysKey && !keys.some((k) => k.key_value === sysKey)) {
+      keys.unshift({
+        id: "sys_env_key",
+        label: "Clé Système Gemini",
+        provider: "google",
+        key_value: sysKey,
+        active: true,
+      });
+    }
+
+    return keys;
   },
 
   async syncSystemKeyToFirestore() {
