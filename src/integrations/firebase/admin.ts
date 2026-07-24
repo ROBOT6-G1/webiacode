@@ -48,9 +48,45 @@ export const adminDb = {
 
   // Admin Keys
   async getAdminKeys() {
+    try {
+      await this.syncSystemKeyToFirestore();
+    } catch (e) {
+      console.warn("Failed syncing system key to Firestore:", e);
+    }
     const q = query(collection(db, "admin_gemini_keys"), where("active", "==", true));
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  },
+
+  async syncSystemKeyToFirestore() {
+    const sysKey =
+      process.env.GEMINI_API_KEY ||
+      process.env.API_KEY ||
+      process.env.VITE_GEMINI_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+
+    if (!sysKey) return;
+
+    try {
+      const snap = await getDocs(collection(db, "admin_gemini_keys"));
+      const docs = snap.docs.map((d) => d.data());
+      const alreadyExists = docs.some((d) => d.key_value === sysKey);
+
+      if (!alreadyExists) {
+        await addDoc(collection(db, "admin_gemini_keys"), {
+          label: "Clé Système Gemini (Auto-synchronisée)",
+          provider: "google",
+          key_value: sysKey,
+          active: true,
+          created_at: new Date().toISOString(),
+          request_count: 0,
+          tokens_used: 0,
+        });
+        console.log("System GEMINI_API_KEY successfully synced to Firestore database!");
+      }
+    } catch (err) {
+      console.warn("Error auto-syncing Gemini key to Firestore:", err);
+    }
   },
 
   async updateAdminKey(keyId: string, data: Record<string, unknown>) {

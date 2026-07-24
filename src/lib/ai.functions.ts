@@ -3450,6 +3450,8 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     if (!result && geminiEnvKey) {
       try {
         result = await callAdminKey(geminiEnvKey, "google", messages);
+        // Sync system key to Firestore so deployed apps (e.g. Vercel) can access it directly
+        adminDb.syncSystemKeyToFirestore().catch((err) => console.warn("Background sync error:", err));
       } catch (err) {
         console.warn("System GEMINI_API_KEY failed:", err);
       }
