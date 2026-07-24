@@ -3520,20 +3520,9 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     }
 
     if (!result) {
-      console.warn(
-        "Service IA Gemini indisponible ou clé non configurée : utilisation du générateur de secours.",
+      throw new Error(
+        "Impossible de contacter le service IA Gemini. Veuillez vérifier ou ajouter votre clé API Gemini dans le panneau Admin (/admin) ou Paramètres IA (/ai-settings) puis réessayez.",
       );
-      result = generateDefaultFallbackSite({
-        prompt: data.prompt,
-        siteType: projectSiteType,
-        whatsapp: projectWhatsapp,
-        pwaEnabled: projectPwa,
-        firebaseConfig,
-        userPlan,
-        currentFiles,
-        language: data.language,
-        platformUrl: data.platformUrl,
-      });
     }
 
     const parsed = extractJson(result.text);

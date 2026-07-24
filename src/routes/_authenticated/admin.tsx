@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { approvePayment } from "@/lib/admin.functions";
+import { adminDb } from "@/integrations/firebase/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -496,6 +497,7 @@ function KeysTab() {
   const q = useQuery({
     queryKey: ["admin-keys"],
     queryFn: async () => {
+      await adminDb.syncSystemKeyToFirestore().catch(() => {});
       const snap = await getDocs(collection(db, "admin_gemini_keys"));
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Array<{
         id: string;
