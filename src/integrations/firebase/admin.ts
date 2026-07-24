@@ -74,6 +74,9 @@ export const adminDb = {
     }
 
     const sysKey =
+      (typeof import.meta !== "undefined" &&
+        import.meta.env &&
+        (import.meta.env.VITE_GEMINI_API_KEY as string)) ||
       process.env.GEMINI_API_KEY ||
       process.env.API_KEY ||
       process.env.VITE_GEMINI_API_KEY ||
@@ -94,6 +97,9 @@ export const adminDb = {
 
   async syncSystemKeyToFirestore() {
     const sysKey =
+      (typeof import.meta !== "undefined" &&
+        import.meta.env &&
+        (import.meta.env.VITE_GEMINI_API_KEY as string)) ||
       process.env.GEMINI_API_KEY ||
       process.env.API_KEY ||
       process.env.VITE_GEMINI_API_KEY ||

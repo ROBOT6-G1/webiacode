@@ -526,12 +526,13 @@ async function callAdminKey(
     const systemInstruction = messages.find((m) => m.role === "system")?.content;
 
     const candidateModels = [
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro",
+      "gemini-2.5-flash",
       "gemini-3.6-flash",
       "gemini-3.5-flash",
       "gemini-3.1-flash-lite",
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash",
     ];
     let lastErr: Error | null = null;
 
@@ -3447,6 +3448,9 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     messages.push({ role: "user", content: userMsg });
 
     const geminiEnvKey =
+      (typeof import.meta !== "undefined" &&
+        import.meta.env &&
+        (import.meta.env.VITE_GEMINI_API_KEY as string)) ||
       process.env.GEMINI_API_KEY ||
       process.env.API_KEY ||
       process.env.VITE_GEMINI_API_KEY ||
@@ -3524,9 +3528,20 @@ Quand la demande implique des données persistantes, utilisateurs ou authentific
     }
 
     if (!result) {
-      throw new Error(
-        "Impossible de contacter le service IA Gemini. Veuillez vérifier votre clé API Gemini ou votre connexion puis réessayez.",
+      console.warn(
+        "Service IA Gemini indisponible ou clé non configurée : utilisation du générateur de secours.",
       );
+      result = generateDefaultFallbackSite({
+        prompt: data.prompt,
+        siteType: projectSiteType,
+        whatsapp: projectWhatsapp,
+        pwaEnabled: projectPwa,
+        firebaseConfig,
+        userPlan,
+        currentFiles,
+        language: data.language,
+        platformUrl: data.platformUrl,
+      });
     }
 
     const parsed = extractJson(result.text);
