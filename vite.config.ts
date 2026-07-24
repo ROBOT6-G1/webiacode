@@ -17,7 +17,7 @@ export default defineConfig({
   vite: {
     plugins: [
       nitro({
-        preset: "node-server",
+        preset: process.env.VERCEL || process.env.VERCEL_ENV ? "vercel" : "node-server",
       }),
     ],
   },
